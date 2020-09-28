@@ -1775,7 +1775,7 @@ CONTAINS
    !if (pxhm == 0) return
 !
    !spgn_long = adjustl(rem_quotes(line(pxhm+3:)))
-   spgn_long = spg_data(i)%symbol_xhm
+   spgn_long = spg_data(kord)%symbol_xhm
    !if (len_trim(spgn_long) > 0) spaceg%symbol_xhm = spgn_long
    !spaceg%symbol_xhm = spgn_long   ! this overwrite 'Unknown'
 
