@@ -5,30 +5,47 @@
    USE fileutil
    USE nr
    use errormod
+   use cmdpath
+   USE iso_fortran_env, only: ERROR_UNIT
    implicit none
-   character(len=:), allocatable :: string
-   integer                       :: val
-   integer                       :: ier
-   integer                       :: len
-   type(spaceg_type)             :: spaceg
-   logical                       :: sfound
-   integer                       :: j,i
-   integer                       :: icode
-   integer                       :: sunit
-   integer                       :: nsymop
-   type(symop_type)              :: symoptemp
-   character(len=80)             :: line
-   type(symop_type), dimension(192) :: symop
-!     integer, dimension(230) :: vetz = 0
-!   integer :: inis,ends
+   character(len=:), allocatable     :: string
+   integer                           :: val
+   integer                           :: ier
+   integer                           :: len
+   type(spaceg_type)                 :: spaceg
+   logical                           :: sfound
+   integer                           :: j,i
+   integer                           :: icode
+   integer                           :: sunit
+   integer                           :: nsymop
+   type(symop_type)                  :: symoptemp
+   character(len=80)                 :: line
+   type(symop_type), dimension(192)  :: symop
    character(len=20), dimension(530) :: spgsym
    integer, dimension(530)           :: freq
    integer :: nspgsym,kpos
    integer, dimension(:), allocatable :: iord
    type(error_type) :: err
+   character(len=256) :: path
 !
+   call get_cmdpath(path,ier=ier)
+   if (ier > 0) then
+       write(ERROR_UNIT,'(a)')'Error in get_cmdpath'
+       return
+   endif
+
+   call spg_set_symmetry_file(trim(path)//'syminfo.lib',err)
+   if (err%signal) then
+       call err%print()
+       return
+   endif
+
    call load_spg_database(err)
-!  leggi argomenti da linea di comando
+   if (err%signal) then
+       call err%print()
+       return
+   endif
+!  
    call program_arguments(string)
 !
    call s_to_i(string,val,ier,len)
@@ -54,17 +71,6 @@
 
        select case (string) 
          case ('-test')
-           !do j=1,230
-           !   sfound = .true.
-           !   icode = 1
-           !   do while (sfound)
-           !      call spg_load(spaceg,spgnum=j,sfound=sfound,code=icode)
-           !      if (sfound) then
-           !          write(6,'(1x,100("="))')
-           !          call spaceg%prn()
-           !      endif
-           !   enddo
-           !enddo
            do i=1,230
               do j=1,spg_index(i)%nat
                  kpos = spg_index(i)%pos(j)
@@ -74,7 +80,7 @@
            enddo
   
          case ('--version')
-           write(0,*)'spginfo library 13.2.2013'
+           write(0,*)'spginfo library 29.9.2020'
 
          case ('--tetragonal')
            nspgsym = 0
@@ -98,8 +104,6 @@
            enddo
 
          case default
-                         !call read_egrfile()
-                         !  stop
 !
            if (file_exist(string)) then   ! is a file?
 !
@@ -138,7 +142,5 @@
 
        end select
    endif
-!
-10 continue
 !
    end program spginfo

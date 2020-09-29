@@ -1,3 +1,4 @@
+#define NOGTK 1
 MODULE errormod
 
 implicit none
@@ -18,6 +19,7 @@ contains
    procedure :: add       => add_message
    procedure :: as_warn   => change_as_warning
    procedure :: as_severe => change_as_severe
+   procedure :: msg       => get_message
 end type error_type
 
 public reallocate_err
@@ -42,7 +44,11 @@ CONTAINS
 !
    err%warning = .false.
    err%signal = .true.
-   if (present(message)) err%message = message
+   if (present(message)) then
+       err%message = message
+   else
+       err%message = ' '
+   endif
    if (present(code)) then
        err%code = code
    else
@@ -111,8 +117,20 @@ CONTAINS
 
 !----------------------------------------------------------------------------------------------------   
 
+   function get_message(err)
+   class(error_type), intent(in) :: err
+   character(len=:), allocatable :: get_message
+   get_message = trim(err%message)
+   end function get_message
+
+!----------------------------------------------------------------------------------------------------   
+
    subroutine print_error_message(err)
-!corr   USE prog_constants
+#if NOGTK
+   USE iso_fortran_env
+#else
+   USE prog_constants
+#endif
    class(error_type), intent(in) :: err
    integer                      :: nExitCode
    character(len=10)            :: errtype
@@ -122,7 +140,11 @@ CONTAINS
    else
        errtype = 'ERROR'
    endif
-!corr   call MsgWinErr(errtype,err%message,WARN_WINDOW,nExitCode)
+#if NOGTK
+   write(ERROR_UNIT,'(a)')trim(err%message)
+#else
+   call MsgWinErr(errtype,err%message,WARN_WINDOW,nExitCode)
+#endif
 !   
    end subroutine
    

@@ -104,7 +104,7 @@ MODULE spginfom
         integer                          :: freq_no=0            ! Frequency as number of occurencies
         real                             :: freq_perc=0.         ! Frequency as percentage
         integer                          :: freq_rank=0          ! Rank
-        !logical                          :: from_user = .false.  ! space group directly set by user in input file o by graphic interface
+        logical                          :: standard = .false.   ! True for standard choice of origin
         
    contains
 
@@ -122,6 +122,7 @@ MODULE spginfom
         procedure :: is_chiral
         procedure :: extinction_symbol => get_extinction_symbol
         procedure :: spg_frequency
+        procedure :: is_standard
 
         procedure, private :: polar3
         procedure, private :: polar1
@@ -142,7 +143,9 @@ MODULE spginfom
       module procedure get_spg_info_hm, get_spg_info_num
    end interface
 
-   character(len=256), private :: spg_filename = '~/bin/syminfo.lib'
+   !character(len=256), private :: spg_filename = '~/bin/syminfo.lib'
+   character(len=256), private :: spg_filename = '/home/corrado/bin/syminfo.lib'
+   !character(len=256), private :: spg_filename = 'syminfo.lib'
 
    character(len=*), dimension(0:13), parameter, private :: laue_name=[ &
    'Unknown', '-1     ','2/m    ','mmm    ','4/m    ','4/mmm  ','-3m    ',   &
@@ -217,9 +220,93 @@ MODULE spginfom
 
 CONTAINS
 
-   subroutine spg_loadfile(spaceg,spgnum,spgstr,symop,sopt,sfound,code)
+   subroutine spg_load(spaceg,spgnum,spgstr,symop,sopt,sfound,code)
 !
 !  Load space group  from number or from symbol or from symmetry operators
+!
+   USE strutil
+   type(spaceg_type), intent(out)                       :: spaceg    ! properties of space group
+   integer, intent(in), optional                        :: spgnum    ! space group number
+   character(len=*), intent(in), optional               :: spgstr    ! space group symbol (Hall, H-M)
+   type(symop_type), dimension(:), intent(in), optional :: symop     ! symmetry operators
+   character(len=*), intent(in), optional               :: sopt      ! combine 'H' (Hall symbol) and 'M' (H-M symbol)
+   logical, intent(out)                                 :: sfound    ! true if space group was found
+   integer, intent(inout), optional                     :: code      ! additional code for search from number
+   character(len=40)                                    :: spgs
+   logical                                              :: is_colon
+   integer                                              :: nsym
+   integer                                              :: lens
+   logical                                              :: find_hall,find_hm
+   integer                                              :: i
+!
+   sfound = .false.
+   if (present(spgnum)) then    ! cerca g.s. a partire dal numero
+       if (spgnum > 0 .and. spgnum <= NUMSPGMAX) then
+           if (present(code)) then
+               if (code <= spg_index(spgnum)%nat) then
+                   spaceg = spg_data(spg_index(spgnum)%pos(code))
+                   sfound = .true.
+               endif
+           else
+               spaceg = spg_data(spg_index(spgnum)%pos(1))
+               sfound = .true.
+           endif
+       endif
+
+   elseif (present(spgstr)) then  ! cerca g.s. a partire dalla stringa
+        find_hall = .true.
+        find_hm = .true.
+        if (present(sopt)) then
+            find_hall = index(sopt,'H') > 0
+            find_hm = index(sopt,'M') > 0
+        endif
+!
+        spgs = spgstr
+        call spg_set_string(spgs)  ! prepare string for search in syminfo.lib
+        lens = len_trim(spgs)
+        if (lens >= 2) then
+            is_colon = is_colon_in_spgn(spgs) > 0
+            sfound = .false.
+            if (find_hm) then    ! Find H-M symbol
+                do i=1,NSPGTOT
+                   call find_hm_symbol(i,spgs,is_colon,sfound)
+                   if (sfound) then
+                       spaceg = spg_data(i)
+                       exit
+                   endif
+                enddo
+            endif
+            if (find_hall .and. .not.sfound) then  !Find Hall symbol
+                do i=1,NSPGTOT
+                   sfound = s_eqidb(spg_data(i)%symbol_hall,spgs)
+                   if (sfound) then
+                       spaceg = spg_data(i)
+                       exit 
+                   endif
+                enddo
+            endif
+        endif
+
+   elseif (present(symop)) then   ! cerca a partire da una lista di operatori di simmetria
+        nsym = size(symop)
+        if (nsym == 0 .or. nsym > 192) return
+        do i=1,NSPGTOT
+           if (symop_equal_sets(nsym, symop, spg_data(i)%nsymop, spg_data(i)%symop)) then
+               spaceg = spg_data(i)
+               sfound = .true.
+               exit 
+           endif
+        enddo
+   endif
+!
+   end subroutine spg_load
+
+!---------------------------------------------------------------------------
+
+   subroutine spg_loadfile(spaceg,spgnum,spgstr,symop,sopt,sfound,code)
+!
+!  Load space group from number or from symbol or from symmetry operators
+!  Obsolete subroutine that requires acess to file syminfo.lib
 !
    USE fileutil
    USE strutil
@@ -368,150 +455,6 @@ CONTAINS
    end subroutine spg_loadfile
 
 !---------------------------------------------------------------------------
-
-   subroutine spg_load(spaceg,spgnum,spgstr,symop,sopt,sfound,code)
-!
-!  Load space group  from number or from symbol or from symmetry operators
-!
-   USE fileutil
-   USE strutil
-   USE iso_fortran_env, only: ERROR_UNIT
-   type(spaceg_type), intent(out)                       :: spaceg    ! properties of space group
-   integer, intent(in), optional                        :: spgnum    ! space group number
-   character(len=*), intent(in), optional               :: spgstr    ! space group symbol (Hall, H-M)
-   type(symop_type), dimension(:), intent(in), optional :: symop     ! symmetry operators
-   character(len=*), intent(in), optional               :: sopt      ! combine 'H' (Hall symbol) and 'M' (H-M symbol)
-   logical, intent(out)                                 :: sfound    ! true if space group was found
-   integer, intent(inout), optional                     :: code      ! additional code for search from number
-   type(file_handle)                                    :: fspg
-   integer                                              :: jfile
-   character(len=200)                                   :: line    
-   integer                                              :: ier
-   integer                                              :: num
-   integer                                              :: pos
-   integer                                              :: lent
-   character(len=40)                                    :: spgs
-   logical                                              :: is_colon
-   integer                                              :: numspaceg
-   type(spaceg_type)                                    :: spgtemp
-   type(sg_info_type)                                   :: info
-   integer                                              :: nsym
-   integer                                              :: lens
-   integer                                              :: sgnum,iers,leni,posl
-   character(len=40)                                    :: symb_hall
-   logical                                              :: find_hall,find_hm,findtype
-   integer                                              :: i,k
-   character(len=40)               :: spgn_long,spgn_short
-!
-   sfound = .false.
-   numspaceg = 0
-   call spaceg%init()
-   call fspg%fopen(spg_filename,'r')
-   if (fspg%good()) then
-       jfile = fspg%handle()
-       if (present(spgnum)) then    ! cerca g.s. a partire dal numero
-           if (spgnum > 0 .and. spgnum <= NUMSPGMAX) then
-               if (present(code)) then
-                   if (code <= spg_index(spgnum)%nat) then
-                       spaceg = spg_data(spg_index(spgnum)%pos(code))
-                       sfound = .true.
-                   endif
-               else
-                   spaceg = spg_data(spg_index(spgnum)%pos(1))
-                   sfound = .true.
-               endif
-           endif
-
-       elseif (present(spgstr)) then  ! cerca g.s. a partire dalla stringa
-            find_hall = .true.
-            find_hm = .true.
-            if (present(sopt)) then
-                find_hall = index(sopt,'H') > 0
-                find_hm = index(sopt,'M') > 0
-            endif
-!
-            spgs = spgstr
-            call spg_set_string(spgs)  ! prepare string for search in syminfo.lib
-            lens = len_trim(spgs)
-            if (lens >= 2) then
-                is_colon = is_colon_in_spgn(spgs) > 0
-                sfound = .false.
-!               loop 2 times for hall and H-M symbol
-                loop_find: do k=1,2
-                    if (k == 1 .and. .not.find_hm) cycle
-                    if (k == 2 .and. .not.find_hall) exit 
-                    findtype = k==2
-                    !call spgtemp%init()
-                    do i=1,NSPGTOT
-                      !read(jfile,'(a)',iostat=ier)line
-                      !if (ier < 0) exit
-                      !if (is_comment_line(line,['#'])) cycle
-!
-!                     leggi numero del gruppo spaziale
-                      !posl = index(line,'number')
-                      !if (posl > 0) then
-                      !    call s_to_i(line(posl+6:),sgnum,iers,leni)
-                      !    cycle
-                      !endif
-                      sgnum = spg_data(i)%num
-
-                      !posl = index(line,'Hall')
-                      !if (posl > 0) then
-                      !    symb_hall = adjustl(rem_quotes(line(posl+4:)))
-                      !    cycle
-                      !endif
-                      symb_hall = spg_data(i)%symbol_hall
-                      !call spgtemp%init()
-                      if (k == 2) then
-                          sfound = s_eqidb(spg_data(i)%symbol_hall,spgs)
-                      else
-                          !spgn_long = spg_data(i)%symbol_xhm
-                          !sfound = s_eqidb(spgn_long,spgs)
-                          call find_hm_symbol(i,line,spgs,is_colon,jfile,sgnum,symb_hall,findtype,sfound,spgtemp)
-                      endif
-
-                      if (sfound) then
-                          !spaceg = spgtemp
-                          !spaceg%defined = .true.
-                          !call spg_read_block(jfile,spaceg,.false.)
-                          spaceg = spg_data(i)
-                          exit loop_find
-                      endif
-
-                    enddo
-                    !rewind(jfile)
-                enddo loop_find
-            endif
-
-       elseif (present(symop)) then   ! cerca a partire da una lista di operatori di simmetria
-            nsym = size(symop)
-            if (nsym == 0 .or. nsym > 192) return
-            do 
-               call spaceg%init()
-               call spg_read_block(jfile,spaceg,.true.,ier)
-               if (ier /= 0) exit
-               if (symop_equal_sets(nsym, symop, spaceg%nsymop, spaceg%symop)) then
-                   info = get_spg_info(spaceg%symbol_xhm)
-                   if (info%num > 0) then
-                       spaceg%symbol_hall = info%hall
-                       spaceg%choice = info%choice
-                   endif
-                   spaceg%defined = .true.
-                   sfound = .true.   ! g.s. trovato!
-                   exit
-               endif
-            enddo
-
-       endif
-       call fspg%fclose()
-   else
-       write(ERROR_UNIT,'(a)')'Cannot open: '//trim(spg_filename)
-       write(ERROR_UNIT,'(a)')'Message: '//trim(fspg%err_msg())
-   endif
-!
-   end subroutine spg_load
-
-!---------------------------------------------------------------------------
  
    subroutine load_spg_database(err)
    use fileutil
@@ -520,68 +463,48 @@ CONTAINS
    use arrayutil
    type(error_type), intent(out)  :: err
    type(file_handle)              :: fspg
-   integer                        :: jfile,pos
+   integer                        :: jfile,pos,numspg,i,num
    character(len=:), allocatable  :: line
-   integer                        :: num,ier,numspg
    type(sg_info_type)             :: info
-   integer                        :: i,j,nspg,kpos
 
    call fspg%fopen(spg_filename,'r')
    if (fspg%fail()) then
        call err%set('Cannot open: '//trim(spg_filename)//char(10)//' Message: '//trim(fspg%err_msg()))
        return
    endif
-
+!
+!  Read syminfo.lib and create database
    jfile = fspg%handle()
    numspg = 0
    do while(get_line(jfile,line,trimmed=.true.,filter=.true.))
       if (len(line) == 0) cycle
       if (is_comment_line(line,['#'])) cycle
 !
-      pos = index(line,'number')
+      pos = index(line,'begin_spacegroup')
       if (pos > 0) then
-          call s_to_i(line(pos+6:),num,ier)
-          if (ier == 0) then
-              numspg = numspg + 1
-              call spg_data(numspg)%init()
-              spg_data(numspg)%num = num
-              spg_data(numspg)%csys_code = csys_code_from_num(num)
-              spg_data(numspg)%defined = .true.
-              call spg_read_block(jfile,spg_data(numspg),.true.)
-              info = get_spg_info(spg_data(numspg)%symbol_xhm)
-              if (info%num > 0) then
-                  spg_data(numspg)%symbol_hall = info%hall
-                  spg_data(numspg)%choice = info%choice
-              endif
-              !call spg_data(numspg)%prn(70)
-              !write(70,'(1x,100("="))')
-              !write(70,*)'NUM=',numspg,spg_data(numspg)%symbol_xhm
+          numspg = numspg + 1
+          call spg_data(numspg)%init()
+          spg_data(numspg)%defined = .true.
+          call spg_read_block(jfile,spg_data(numspg),.true.)
+          info = get_spg_info(spg_data(numspg)%symbol_xhm)
+          if (info%num > 0) then
+              spg_data(numspg)%symbol_hall = info%hall
+              spg_data(numspg)%choice = info%choice
           endif
       endif
    enddo
    call fspg%fclose()
-   !write(70,*)'NMAX=',maxval(spg_data%num)
+!
+!  Make index for fast acess to database
    do i=1,NSPGTOT
       call container_set(spg_index(spg_data(i)%num),i)
    enddo
-   !do i=1,NUMSPGMAX
-   !   !write(70,*)'NUM:',i,spg_index(i)%nat,size(spg_index(i)%pos)
-   !   do j=1,spg_index(i)%nat
-   !      kpos = spg_index(i)%pos(j)
-   !      call spg_data(kpos)%prn(70)
-   !      write(70,'(1x,100("="))')
-   !   enddo
-   !enddo
-   !do i=1,NUMSPGMAX
-   !   nspg = 0
-   !   do j=1,NSPGTOT
-   !      if (spg_data(j)%num == i) then
-   !          nspg = nspg + 1
-   !          vet(nspg) = 
-   !      endif
-   !   enddo
-   !   write(70,*)'NUM:',i,nspg
-   !enddo
+!
+!  Set standard 
+   do i=1,NUMSPGMAX
+      num = spg_index(i)%pos(1)  ! space group 1 is the standard
+      spg_data(num)%standard = .true.
+   enddo
 
    end subroutine load_spg_database
 
@@ -633,7 +556,7 @@ CONTAINS
    integer                        :: i
    type(fract_type), dimension(3) :: fr
    character(len=3)               :: adv
-   integer                        :: nold,level
+   integer                        :: nold,level,num
 !
    if (present(kpri)) then
        kpr = kpri
@@ -685,6 +608,10 @@ CONTAINS
    write(kpr,'(a,i0)')   ' Multiplicity:           ',this%nsymop
    write(kpr,'(a,i0,a,i0)') &
                          ' Frequency(no. in CSD):  ',this%freq_no,'('//r_to_s(this%freq_perc,2)//'%), rank:',this%freq_rank
+   if (.not.this%standard) then
+       num = spg_index(this%num)%pos(1)
+       write(kpr,'(a)') ' Non-standard space group setting ('//trim(spg_data(num)%symbol_xhm)//')'
+   endif
    if (this%is_chiral()) then
        write(kpr,'(a)')  ' Chiral space group (Sohncke space group) found!'
    endif
@@ -1743,33 +1670,23 @@ CONTAINS
 
 !---------------------------------------------------------------------------
 
-   subroutine find_hm_symbol(kord,line,strfind,is_colon,jfile,sgnum,symb_hall,find_hall,sfound,spaceg)
+   !subroutine find_hm_symbol(kord,line,strfind,is_colon,jfile,sgnum,symb_hall,find_hall,sfound,spaceg)
+   subroutine find_hm_symbol(kord,strfind,is_colon,sfound)
 !
 !  Try to match input symbol with symbols on symmetry table
 !
    USE strutil
-   integer, intent(in)             :: kord
-   character(len=*), intent(in)    :: line
-   character(len=*), intent(in)    :: strfind
-   logical, intent(in)             :: is_colon
-   integer, intent(in)             :: jfile
-   integer, intent(in)             :: sgnum
-   character(len=*), intent(in)    :: symb_hall
-   logical, intent(in)             :: find_hall
-   logical, intent(inout)          :: sfound
-   type(spaceg_type), intent(inout)  :: spaceg
-   character(len=40)               :: spgn_long,spgn_short
-   integer                         :: irep
-   integer                         :: pxhm,posc
-   type(sg_info_type)              :: info
-!corr   integer                         :: oksymb
-   character(len=200)              :: line1    
-   character(len=40), dimension(2) :: words
-   integer                         :: nwords
-   integer                         :: lens
-   integer                         :: pos
-   character(len=40)               :: strhm
-   logical                         :: checkw
+   integer, intent(in)          :: kord
+   character(len=*), intent(in) :: strfind
+   logical, intent(in)          :: is_colon
+   logical, intent(inout)       :: sfound
+   character(len=40)            :: spgn_long,spgn_short
+   integer                      :: irep
+   integer                      :: posc
+   integer                      :: lens
+   integer                      :: pos
+   character(len=40)            :: strhm
+   logical                      :: checkw
 !
    !pxhm = index(line,'xHM')
    !if (pxhm == 0) return
@@ -1796,7 +1713,8 @@ CONTAINS
 !
 !      This check only for cubic space
        if (.not.sfound) then
-           if (sgnum >= 195) then  
+           !if (sgnum >= 195) then  
+           if (spg_data(kord)%num >= 195) then  
                posc = index(spgn_long,'-3')
                if (posc > 0) then
                    spgn_short = spgn_long
@@ -1814,58 +1732,60 @@ CONTAINS
        endif
    endif
 !
-!  Get alternative symbol from table
-   info = get_spg_info(spaceg%symbol_xhm)
-!
 !  Compare symbol with table choice (ex. P2/a:b3, B2/m:a1, ...)
    if (.not.sfound) then     
-       strhm = info%hm1
-       pos = index(strhm,'=')
-       if (pos > 0) then
-           strhm(pos:) = ' '
-       endif
-       sfound = s_eqi(strhm,strfind)
-       if (.not.sfound) then  ! forza il confronto rimuovendo i :
-           call s_s_delete(strhm,':',irep)
-           if (irep > 0) sfound = s_eqi(strhm,strfind)
+!
+!      Get alternative symbol from table
+       if (len_trim(spg_data(kord)%choice) > 0 .and. spg_data(kord)%choice /= 'Unknown') then
+           !strhm = spg_data(kord)%symbol_xhm
+           strhm = spgn_short
+           pos = index(strhm,':')
+           if (pos > 0) then
+               strhm(pos:) = ' '
+           endif
+           strhm = trim(strhm)//':'//trim(spg_data(kord)%choice)
+           write(70,*)'TABLE:',trim(strhm),spg_data(kord)%num
+           sfound = s_eqidb(strhm,strfind)
+           if (.not.sfound) then  ! forza il confronto rimuovendo i :
+               call s_s_delete(strhm,':',irep)
+               if (irep > 0) sfound = s_eqi(strhm,strfind)
+           endif
        endif
    endif
 !
 !  Try to read the old symbol
    if (.not.sfound) then
-       read(jfile,'(a)')line1
-       call cutst(line1)
-       call get_words_quotes(line1,words,nwords)
-       if (nwords > 0) then ! read only the first old symbol
+       !nwords = 0
+       !do i=1,2
+       !   if (len_trim(spg_data(kord)%symbol_alt(i)) > 0) then
+       !       nwords = nwords + 1
+       !       words(i) = spg_data(kord)%symbol_alt(i)
+       !   endif
+       !enddo
+       !read(jfile,'(a)')line1
+       !call cutst(line1)
+       !call get_words_quotes(line1,words,nwords)
+       !if (nwords > 0) then ! read only the first old symbol
+       if (len_trim(spg_data(kord)%symbol_alt(1))> 0) then ! read only the first old symbol
 !
-!          se il vecchio simbolo differisce solo per :1 salto questo controllo per favorire il :2 (es. strfind=I 41/a ma old: I 41 / a)
+!          se il vecchio simbolo differisce solo per :1 salto questo controllo per favorire il :2 (es. strfind=I 41/a ma old: I 41/a)
            checkw = .true.
            if (lens > 2) then
-               checkw = .not.(spgn_long(lens-1:lens) == ':1' .and. s_eqidb(spgn_long(:lens-2),words(1))) ! old symbol equal to spg without :1
+               checkw = .not.(spgn_long(lens-1:lens) == ':1' .and.  &
+                        s_eqidb(spgn_long(:lens-2),spg_data(kord)%symbol_alt(1))) ! old symbol equal to spg without :1
            endif
-           if (checkw) sfound = s_eqidb(words(1),strfind)
+           if (checkw) sfound = s_eqidb(spg_data(kord)%symbol_alt(1),strfind)
        endif
-       if (nwords == 2) then
+       !if (nwords == 2) then
+       if (.not.sfound) then
+           if (len_trim(spg_data(kord)%symbol_alt(2))> 0) then ! read only the first old symbol
 !
-!          only for symbol: H-3m, H-3c, ...
-           if (words(2)(1:1) == 'H') sfound = s_eqidb(words(2),strfind)
+!              only for symbol: H-3m, H-3c, ...
+               if (spg_data(kord)%symbol_alt(2)(1:1) == 'H') sfound = s_eqidb(spg_data(kord)%symbol_alt(2),strfind)
+           endif
        endif
-       if (sfound) backspace(jfile)
+       !if (sfound) backspace(jfile)
    endif
-!
-!corr   if (sfound) then
-!corr       if (info%num > 0) then ! symbols found by get_symbols
-!corr           spaceg%symbol_hall = adjustl(info%hall)
-!corr           spaceg%choice = info%choice
-!corr       else
-!corr           spaceg%symbol_hall = symb_hall
-!corr       endif
-!corr       backspace(jfile)
-!corr       backspace(jfile)
-!corr       backspace(jfile)
-!corr       backspace(jfile)
-!corr       backspace(jfile)
-!corr   endif
 !
    end subroutine find_hm_symbol  
 
@@ -2594,6 +2514,7 @@ CONTAINS
    integer                          :: k1,k2,k3
    real, dimension(3)               :: tryor
    integer                          :: i
+   real, dimension(3,3)             :: mat
    real, dimension(3)               :: vet
    integer                          :: nver
    integer                          :: nc
@@ -2633,7 +2554,9 @@ CONTAINS
             nver = 1
             do i=2,spaceg%nsymop_prim
                do nc = 1,spaceg%ncoper
-                  vet = matmul((spaceg%symop(i)%rot(:,:) - identity_mat(:,:)),tryor) - spaceg%coper(:,nc)
+                  !vet = matmul((spaceg%symop(i)%rot(:,:) - identity_mat(:,:)),tryor) - spaceg%coper(:,nc) ! bug ifort 19.1.2.254 with -check all
+                  mat = spaceg%symop(i)%rot(:,:) - identity_mat(:,:)
+                  vet = matmul(mat,tryor) - spaceg%coper(:,nc)
                   verif = all(mod(abs(vet)+10,1.0) <= 0.05) 
                   if (kpr)then
                       fr = fractional(tryor)
@@ -3905,5 +3828,13 @@ CONTAINS
    enddo
 !
    end subroutine print_spg_freq
+
+!--------------------------------------------------------------------------------------
+
+   logical function is_standard(spg)
+   class(spaceg_type), intent(in) :: spg
+   is_standard = .false.
+   
+   end function is_standard
 
 END MODULE spginfom
