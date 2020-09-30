@@ -1,12 +1,12 @@
-#FC = ifort -fpp -traceback
-#FCFLAGS=-g -check all -warn all
-FC = gfortran -cpp
-FCFLAGS=-Wall -g
+FC = ifort -fpp -traceback
+FCFLAGS=-g -check all -warn all -check noarg_temp_created
+#FC = gfortran -cpp
+#FCFLAGS=-Wall -g
 
 all: spginfo
 
-spginfo: constants.o lsqutil.o arrayutil.o strutil.o math_util.o error.o cmdpath.o fileutil.o fract.o program.o symm_table.o spginfo.o main.o 
-	$(FC) constants.o arrayutil.o strutil.o lsqutil.o math_util.o error.o cmdpath.o fileutil.o fract.o program.o symm_table.o spginfo.o main.o -o spginfo
+spginfo: constants.o lsqutil.o arrayutil.o strutil.o math_util.o error.o cmdpath.o fileutil.o fract.o program.o symm_table.o spginfo.o unit_cell.o main.o 
+	$(FC) constants.o arrayutil.o strutil.o lsqutil.o math_util.o error.o cmdpath.o fileutil.o fract.o program.o symm_table.o spginfo.o unit_cell.o  main.o -o spginfo
 
 
 constants.o: constants.f90
@@ -45,8 +45,10 @@ cmdpath.o: cmdpath.f90
 spginfo.o: spginfo.f90 strutil.f90 math_util.f90 lsqutil.f90
 	$(FC) $(FCFLAGS) -c spginfo.f90 
 
+unit_cell.o: unit_cell.f90
+	$(FC) $(FCFLAGS) -c unit_cell.f90 
 
-main.o: main.f90 spginfo.f90 program.f90 fract.f90 symm_table.f90 cmdpath.f90 fileutil.f90 error.f90 math_util.f90 lsqutil.f90 strutil.f90 constants.f90 arrayutil.f90
+main.o: main.f90 unit_cell.f90 spginfo.f90 program.f90 fract.f90 symm_table.f90 cmdpath.f90 fileutil.f90 error.f90 math_util.f90 lsqutil.f90 strutil.f90 constants.f90 arrayutil.f90
 	$(FC) $(FCFLAGS) -c main.f90
 
 clean: 

@@ -105,6 +105,7 @@ MODULE spginfom
         real                             :: freq_perc=0.         ! Frequency as percentage
         integer                          :: freq_rank=0          ! Rank
         logical                          :: standard = .false.   ! True for standard choice of origin
+        character(len=8)                 :: pmat = ' '           ! Transformation matrix to standard setting
         
    contains
 
@@ -122,7 +123,7 @@ MODULE spginfom
         procedure :: is_chiral
         procedure :: extinction_symbol => get_extinction_symbol
         procedure :: spg_frequency
-        procedure :: is_standard
+        procedure :: get_pmat
 
         procedure, private :: polar3
         procedure, private :: polar1
@@ -490,6 +491,7 @@ CONTAINS
           if (info%num > 0) then
               spg_data(numspg)%symbol_hall = info%hall
               spg_data(numspg)%choice = info%choice
+              spg_data(numspg)%pmat = info%pmat
           endif
       endif
    enddo
@@ -2240,13 +2242,6 @@ CONTAINS
    if (present(spos))spos = 0
    if (len_trim(hm_symbol) == 0) return
    do i=1,size(sg_info)
-!corr      pos = index(sg_info(i)%hm1,'=')
-!corr      if (pos == 0) then 
-!corr          str = sg_info(i)%hm1
-!corr      else
-!corr          str = sg_info(i)%hm1(pos+2:)
-!corr      endif
-!corr      if(s_eqidb(hm_symbol,str)) then
       str = get_hm1(sg_info(i))
       if(s_eqidb(hm_symbol,str)) then
          info = sg_info(i)
@@ -3831,10 +3826,86 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------
 
-   logical function is_standard(spg)
-   class(spaceg_type), intent(in) :: spg
-   is_standard = .false.
+   subroutine string_to_matrix(str,pmat,pvet)
+   use strutil
+   character(len=*), intent(in)                :: str
+   character(len=len(str))                     :: smat
+   integer, dimension(3,3), intent(out)        :: pmat
+   real, dimension(3), intent(out)             :: pvet
+   character(len=:), allocatable, dimension(:) :: wordv
+   integer                                     :: nword
+   integer                                     :: i
+!
+   smat = str
+   call s_rep_ch(smat,',',' ')
+!
+   call get_words1(smat,wordv,nword)
+   do i=1,nword
+      call string_to_equation(wordv(i),pmat(:,i),pvet(i))
+      !write(0,'(a,a,3i5,f10.2)')'word=',wordv(i),pmat(i,:),pvet(i)
+   enddo
+!
+   end subroutine string_to_matrix
+
+!--------------------------------------------------------------------------------------
    
-   end function is_standard
+   subroutine string_to_equation(str,vet,tr)
+   character(len=*), intent(in)       :: str
+   integer, dimension(3), intent(out) :: vet
+   real, intent(out)                  :: tr
+   integer                            :: i,ich
+   integer :: isgn, ndig
+   integer, dimension(2) :: dig
+!
+   vet(:) = 0
+   tr = 0 
+   isgn = 1
+   ndig = 0
+   do i=1,len_trim(str)
+      select case (str(i:i))
+        case ('-')
+          isgn = -1
+        case ('+')
+          isgn = 1
+        case ('a','b','c')
+          ich = ichar(str(i:i)) - ichar('a') + 1
+          vet(ich) = isgn
+        case ('1','4')
+          ndig = ndig + 1
+          dig(ndig) = (ichar(str(i:i)) - ichar('1') + 1) * isgn
+          isgn = 1
+      end select
+   enddo
+   if (ndig == 2) then
+       tr = real(dig(1)) / dig(2)
+   endif
+!
+   end subroutine string_to_equation
+ 
+!--------------------------------------------------------------------------------------
+
+   subroutine get_pmat(spg,mat,vet)
+   class(spaceg_type), intent(in)       :: spg
+   integer, dimension(3,3), intent(out) :: mat
+   real, dimension(3), intent(out)      :: vet
+!
+   call string_to_matrix(spg%pmat,mat,vet)
+!
+   end subroutine get_pmat
+
+!--------------------------------------------------------------------------------------
+
+   function standard_spg(spg) result(std_spg)
+   type(spaceg_type), intent(in) :: spg
+   type(spaceg_type)             :: std_spg
+   integer                       :: num
+!
+   call std_spg%init()
+   if (spg%num == 0) return
+
+   num = spg_index(spg%num)%pos(1)
+   std_spg = spg_data(num)
+!
+   end function standard_spg
 
 END MODULE spginfom

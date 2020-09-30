@@ -12,11 +12,16 @@
      module procedure equal_matrix_r, equal_matrix_i
  end interface
 
+ private :: is_integer_noeps, is_integer_eps
+ interface is_integer
+     module procedure is_integer_noeps, is_integer_eps
+ end interface
+
  contains
 
    logical function is_nan(x)
 #ifdef __INTEL_COMPILER
-   USE ieee_arithmetic
+   USE, intrinsic :: ieee_arithmetic
    real, intent(in) :: x
    is_nan = ieee_is_nan(x) 
 #else
@@ -25,6 +30,18 @@
    is_nan = (trim(r_to_s(x)) == 'NaN')
 #endif
    end function is_nan
+
+!---------------------------------------------------------------------------------------------------------
+
+   logical function is_inf(x)
+#ifdef __INTEL_COMPILER
+   USE, intrinsic :: ieee_arithmetic
+   real, intent(in) :: x
+   is_inf = .not.ieee_is_finite(x)
+#else
+!!!TODO
+#endif
+   end function is_inf
 
 !---------------------------------------------------------------------------------------------------------
   
@@ -132,5 +149,30 @@
    integer, dimension(:), intent(in) :: vet1,vet2
    equal_vector_i = all (abs(vet1 - vet2) == 0)
    end function equal_vector_i
+
+!------------------------------------------------------------------------------------------
+
+   elemental logical function is_integer_noeps(rnum)
+   real, intent(in) :: rnum
+   is_integer_noeps = ceiling(rnum) == rnum
+   end function is_integer_noeps
+
+!------------------------------------------------------------------------------------------
+
+   elemental logical function is_integer_eps(rnum,eps)
+   real, intent(in) :: rnum,eps
+   is_integer_eps = abs(nint(rnum) - rnum) <= eps
+   end function is_integer_eps
+
+!------------------------------------------------------------------------------------------
+
+   real function determinante(mat)
+!
+   real, dimension(3,3) :: mat
+!
+   determinante = mat(1,1)*mat(2,2)*mat(3,3) + mat(1,2)*mat(2,3)*mat(3,1) + mat(1,3)*mat(2,1)*mat(3,2) &
+                - mat(3,1)*mat(2,2)*mat(1,3) - mat(3,2)*mat(2,3)*mat(1,1) - mat(3,3)*mat(2,1)*mat(1,2)
+!
+   end function determinante
 
  END MODULE math_util
