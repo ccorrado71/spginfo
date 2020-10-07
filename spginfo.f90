@@ -105,7 +105,8 @@ MODULE spginfom
         real                             :: freq_perc=0.         ! Frequency as percentage
         integer                          :: freq_rank=0          ! Rank
         logical                          :: standard = .false.   ! True for standard choice of origin
-        character(len=8)                 :: pmat = ' '           ! Transformation matrix to standard setting
+        character(len=46)                :: pmat = ' '           ! Transformation matrix to non-conventional setting
+        character(len=17)                :: pmat1 = ' '          ! Transformation matrix to standard setting
         
    contains
 
@@ -123,7 +124,7 @@ MODULE spginfom
         procedure :: is_chiral
         procedure :: extinction_symbol => get_extinction_symbol
         procedure :: spg_frequency
-        procedure :: get_pmat
+        procedure :: get_pmat, get_pmat1
 
         procedure, private :: polar3
         procedure, private :: polar1
@@ -145,8 +146,8 @@ MODULE spginfom
    end interface
 
    !character(len=256), private :: spg_filename = '~/bin/syminfo.lib'
-   character(len=256), private :: spg_filename = '/home/corrado/bin/syminfo.lib'
-   !character(len=256), private :: spg_filename = 'syminfo.lib'
+   !character(len=256), private :: spg_filename = '/home/corrado/bin/syminfo.lib'
+   character(len=256), private :: spg_filename = 'syminfo.lib'
 
    character(len=*), dimension(0:13), parameter, private :: laue_name=[ &
    'Unknown', '-1     ','2/m    ','mmm    ','4/m    ','4/mmm  ','-3m    ',   &
@@ -464,9 +465,11 @@ CONTAINS
    use arrayutil
    type(error_type), intent(out)  :: err
    type(file_handle)              :: fspg
-   integer                        :: jfile,pos,numspg,i,num
+   integer                        :: jfile,pos,numspg,i,j,num,spos
    character(len=:), allocatable  :: line
    type(sg_info_type)             :: info
+   !real, dimension(3,3)           :: pmat
+   !real, dimension(3)             :: pvet
 
    call fspg%fopen(spg_filename,'r')
    if (fspg%fail()) then
@@ -487,11 +490,12 @@ CONTAINS
           call spg_data(numspg)%init()
           spg_data(numspg)%defined = .true.
           call spg_read_block(jfile,spg_data(numspg),.true.)
-          info = get_spg_info(spg_data(numspg)%symbol_xhm)
+          info = get_spg_info(spg_data(numspg)%symbol_xhm,spos=spos)
           if (info%num > 0) then
               spg_data(numspg)%symbol_hall = info%hall
               spg_data(numspg)%choice = info%choice
-              spg_data(numspg)%pmat = info%pmat
+              spg_data(numspg)%pmat = pmatrix(spos)%mat
+              spg_data(numspg)%pmat1 = pmatrix(spos)%mat1
           endif
       endif
    enddo
@@ -504,9 +508,29 @@ CONTAINS
 !
 !  Set standard 
    do i=1,NUMSPGMAX
-      num = spg_index(i)%pos(1)  ! space group 1 is the standard
-      spg_data(num)%standard = .true.
+      if (spg_index(i)%nat == 1) then
+          num = spg_index(i)%pos(1)  ! space group 1 is the standard
+          spg_data(num)%standard = .true.
+      else
+          ! The standard has pmat = identity matrix
+          do j=1,spg_index(i)%nat
+             num = spg_index(i)%pos(j) 
+             if (s_eqi(spg_data(num)%pmat,'a,b,c')) then
+                 spg_data(num)%standard = .true.
+                 exit
+             endif
+          enddo
+      endif
    enddo
+
+   !do i=1,NSPGTOT
+   !   write(70,'(a)')"========================================================"
+   !   write(70,'(i5,a10,5x,a)')spg_data(i)%num,trim(spg_data(i)%symbol_xhm),trim(spg_data(i)%pmat)
+   !   call string_to_pmatrix(spg_data(i)%pmat,pmat,pvet)
+   !   do j=1,3
+   !      write(70,'(3f10.3,f10.2)')pmat(j,:),pvet(j)
+   !   enddo
+   !enddo
 
    end subroutine load_spg_database
 
@@ -966,6 +990,8 @@ CONTAINS
    this%chelim = (/0.0,0.0,0.0/)
    this%che_descr = '0<=x<=0; 0<=y<=0; 0<=z<=0'
    this%defined = .true.
+   this%pmat = 'a,b,c'
+   this%pmat1 = 'a,b,c'
    end subroutine set_p1
 
 !---------------------------------------------------------------------------
@@ -1746,7 +1772,7 @@ CONTAINS
                strhm(pos:) = ' '
            endif
            strhm = trim(strhm)//':'//trim(spg_data(kord)%choice)
-           write(70,*)'TABLE:',trim(strhm),spg_data(kord)%num
+           !write(70,*)'TABLE:',trim(strhm),spg_data(kord)%num
            sfound = s_eqidb(strhm,strfind)
            if (.not.sfound) then  ! forza il confronto rimuovendo i :
                call s_s_delete(strhm,':',irep)
@@ -3826,11 +3852,11 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------
 
-   subroutine string_to_matrix(str,pmat,pvet)
+   subroutine string_to_pmatrix(str,pmat,pvet)
    use strutil
    character(len=*), intent(in)                :: str
    character(len=len(str))                     :: smat
-   integer, dimension(3,3), intent(out)        :: pmat
+   real, dimension(3,3), intent(out)           :: pmat
    real, dimension(3), intent(out)             :: pvet
    character(len=:), allocatable, dimension(:) :: wordv
    integer                                     :: nword
@@ -3841,57 +3867,86 @@ CONTAINS
 !
    call get_words1(smat,wordv,nword)
    do i=1,nword
-      call string_to_equation(wordv(i),pmat(:,i),pvet(i))
+      call string_to_pmatrix_col(wordv(i),pmat(:,i),pvet(i))
       !write(0,'(a,a,3i5,f10.2)')'word=',wordv(i),pmat(i,:),pvet(i)
    enddo
 !
-   end subroutine string_to_matrix
+   end subroutine string_to_pmatrix
 
 !--------------------------------------------------------------------------------------
    
-   subroutine string_to_equation(str,vet,tr)
-   character(len=*), intent(in)       :: str
-   integer, dimension(3), intent(out) :: vet
-   real, intent(out)                  :: tr
-   integer                            :: i,ich
-   integer :: isgn, ndig
-   integer, dimension(2) :: dig
+   subroutine string_to_pmatrix_col(str,vet,tr)
+   use strutil
+   character(len=*), intent(in)    :: str
+   real, dimension(3), intent(out) :: vet
+   real, intent(out)               :: tr
+   integer                         :: i,ich,lens
+   integer                         :: isgn, num, den
+   integer                         :: ier
+   real                            :: frac
+   logical                         :: is_frac
 !
    vet(:) = 0
    tr = 0 
    isgn = 1
-   ndig = 0
-   do i=1,len_trim(str)
-      select case (str(i:i))
-        case ('-')
-          isgn = -1
-        case ('+')
-          isgn = 1
-        case ('a','b','c')
-          ich = ichar(str(i:i)) - ichar('a') + 1
-          vet(ich) = isgn
-        case ('1','4')
-          ndig = ndig + 1
-          dig(ndig) = (ichar(str(i:i)) - ichar('1') + 1) * isgn
-          isgn = 1
-      end select
+   i = 0
+   lens = len_trim(str)
+   is_frac = .false.
+   do
+     i = i + 1
+     if (i > lens) exit
+     if (ch_is_alpha(str(i:i))) then
+         ich = ichar(str(i:i)) - ichar('a') + 1
+         vet(ich) = isgn
+         isgn = 1
+         if (is_frac) then
+             vet(ich) = vet(ich)*frac
+             is_frac = .false.
+         endif
+     elseif (ch_is_digit(str(i:))) then
+         call s_to_i(str(i:i),num,ier)
+         i = i + 1
+         if (str(i:i) == '/') then
+             call get_next_number(str,i,inum=den,ier=ier)
+             frac = isgn * real(num) / den
+             if (i == lens) then
+                 tr = frac
+             else
+                 if (ch_is_alpha(str(i+1:i+1))) then
+                     is_frac = .true.
+                 endif
+             endif
+         endif
+     elseif (str(i:i) == '-') then
+         isgn = -1
+     elseif (str(i:i) == '+') then
+         isgn = 1
+     endif
    enddo
-   if (ndig == 2) then
-       tr = real(dig(1)) / dig(2)
-   endif
 !
-   end subroutine string_to_equation
+   end subroutine string_to_pmatrix_col
  
 !--------------------------------------------------------------------------------------
 
    subroutine get_pmat(spg,mat,vet)
-   class(spaceg_type), intent(in)       :: spg
-   integer, dimension(3,3), intent(out) :: mat
-   real, dimension(3), intent(out)      :: vet
+   class(spaceg_type), intent(in)    :: spg
+   real, dimension(3,3), intent(out) :: mat
+   real, dimension(3), intent(out)   :: vet
 !
-   call string_to_matrix(spg%pmat,mat,vet)
+   call string_to_pmatrix(spg%pmat,mat,vet)
 !
    end subroutine get_pmat
+
+!--------------------------------------------------------------------------------------
+
+   subroutine get_pmat1(spg,mat,vet)
+   class(spaceg_type), intent(in)    :: spg
+   real, dimension(3,3), intent(out) :: mat
+   real, dimension(3), intent(out)   :: vet
+!
+   call string_to_pmatrix(spg%pmat1,mat,vet)
+!
+   end subroutine get_pmat1
 
 !--------------------------------------------------------------------------------------
 

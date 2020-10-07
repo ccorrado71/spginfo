@@ -10,8 +10,8 @@ contains
    type(spaceg_type) :: spg,std_spg
    real, dimension(6) :: cellpar = [10.696,18.813,6.816,90.,111.30,90.]
    type(cell_type) :: cell,cellnew
-   integer, dimension(3,3) :: pmat,pmat1,pmat2
-   real, dimension(3)      :: pvet,pvet1
+   real, dimension(3,3) :: pmat
+   real, dimension(3)      :: pvet
    integer                 :: i
 !
    spg = init_spaceg_type('P 21/n')
@@ -19,9 +19,10 @@ contains
        write(6,'(a)')trim(spg%symbol_xhm)//' is not standard'
        std_spg = standard_spg(spg)
        write(6,'(a)')'Standard is '//trim(std_spg%symbol_xhm)
-       call string_to_matrix(spg%pmat,pmat,pvet)
+       !call string_to_matrix(spg%pmat1,pmat,pvet)
+       call spg%get_pmat1(pmat,pvet)
        do i=1,3
-          write(6,'(3i5,f10.2)')pmat(i,:),pvet(i)
+          write(6,'(3f10.3,f10.2)')pmat(i,:),pvet(i)
        enddo
    endif
    cell = set_cell_type(cellpar)
@@ -32,14 +33,14 @@ contains
    call cellnew%write(6)
 
    !P21/n -> P21/a 
-   call string_to_matrix('c,b,-a-c',pmat1,pvet1)
-   do i=1,3
-      write(6,'(3i5,f10.2)')pmat1(i,:),pvet1(i)
-   enddo
-   pmat2 = matmul(pmat,pmat1)
-   do i=1,3
-      write(6,'(3i5,f10.2)')pmat2(i,:)
-   enddo
+   !call string_to_matrix('c,b,-a-c',pmat1,pvet1)
+   !do i=1,3
+   !   write(6,'(3i5,f10.2)')pmat1(i,:),pvet1(i)
+   !enddo
+   !pmat2 = matmul(pmat,pmat1)
+   !do i=1,3
+   !   write(6,'(3i5,f10.2)')pmat2(i,:)
+   !enddo
 !
    end subroutine test_spg
 
@@ -93,8 +94,8 @@ end module test_space
        call err%print()
        go to 10
    endif
-       call test_spg()
-       go to 10
+       !call test_spg()
+       !go to 10
 !  
    call program_arguments(string)
 !

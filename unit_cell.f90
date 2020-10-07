@@ -987,10 +987,10 @@
 !  Transform cell in newcell by pmat
 !
    use trig_constants
-   type(cell_type), intent(in)         :: cell
-   integer, dimension(3,3), intent(in) :: pmat
-   type(cell_type), intent(out)        :: newcell
-   real, dimension(3,3)                :: gnew
+   type(cell_type), intent(in)      :: cell
+   real, dimension(3,3), intent(in) :: pmat
+   type(cell_type), intent(out)     :: newcell
+   real, dimension(3,3)             :: gnew
 !                      T
 !  Metric tensor: G = P G P from page 85 of ITC volume A
    gnew = matmul(transpose(pmat),matmul(cell%get_g(),pmat))
