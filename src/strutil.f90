@@ -2,106 +2,109 @@ MODULE STRUTIL
 !
 !                                    - List of procedures -
 !
-!  S filtra(string)                                  ! Remove empty space
-!  S Cutst(line1,nlong1,line2,nlong2)                ! Removes the first word of the input String.
-!  S Cutsta(line1,nlong1,line2,nlong2)               ! Removes the first word of the input String. (NEW allocatable)
-!  S Getnum(line,vet,ivet,iv)                        ! Converts a string to numbers and write on VET/IVET if real/integer.
-!  S Getnum1(line,vet,ivet,iv)                       ! Converts a string to numbers and write on VET/IVET if real/integer (NEW with allocation)
-!  S get_words(line,wordv,nword)                     ! Estrai da line tutte le stringhe separate da spazi in wordv
-!  S get_words1(line,wordv,nword)                    ! Estrai da line tutte le stringhe separate da spazi in wordv (NEW without allocation)
-!  S get_words_quotes(line,wordv,nword)              ! Estrai da line solo le stringhe in parentesi
-!  S get_words_quotes_a(line,wordv,nword,btype)      ! allocatable version of get_words_quotes
-!  S get_words_quotes1(line,wordv,nword)             ! Estrai da line le stringhe in parentesi e non
-!  S parse_line_reals(line,posv,rnum,ier)            ! Get real number from string in position pos. ier > 0 contains position
-!  S get_next_number(string,pos,numb,ier)            ! Get the next number starting from position pos
-!  F U_Case(Text)                                    ! Conversion to upper case, text is not modified
-!  F L_Case(Text)                                    ! Conversion to lower case, text is not modified
-!  S Init_Err_String()                               ! Initializes general error variables
-!  F Lung (Stringa)                                  ! Lenght of stringa
-!  F remc0(s0)                                       ! Removes char(0) from the end of s0
-!  S s_trim_char ( str , c)                          ! Removes trailing c from a string
-!  F add_c0(str,pos)                                 ! Add char(0) non oltre il carattere pos
-!  S s_cat0(s1,s2)                                   ! Joins s1 and s2 separated with blank. Output in s1
-!  S s_catend(s1,s2)                                 ! Joins s1 and s2 plus char(13)//char(10) for end of row. Output in s1
-!  S sort_heap_external ( n, indx, i, j, isgn )      ! Externally sorts a list of items into ascending order.
-!  S svec_sort_heap_a ( n, a )                       ! Ascending sorts a vector of character strings using heap sort.
-!  S svec_sort_heap_a_index ( n, sarray, indx )      ! Does a case-sensitive indexed heap sort of a vector of strings
-!  S s_rep_ch ( s, c1, c2 )                          ! Replaces all occurrences of one character by another
-!  S s_rep ( s, sub1, sub2, irep )                   ! Replaces all occurrences of SUB1 by SUB2 in a string.
-!  F s_replace(s, sub1, sub2)                        ! Replaces all occurrences of SUB1 by SUB2 in a string.
-!  F s_replace_by_blanks(s, sub1)                    ! Replaces all occurrences of SUB1 by blanks
-!  F s_u2b ( s )                                     ! Replaces underscores by blanks.
-!  S s_filter(str)                                   ! Filtra una stringa
-!  S s_chop ( s, ilo, ihi )                          ! "Chops out" a portion of a string, and closes up the hole
-!  F string_from_time(time)  result(stime)           ! Converts time in string. Time is expressed in seconds
-!  S s_s_insert ( s, ipos, s2 )                      ! Inserts a substring into a string.
-!  S s_set_delete ( s, s2 )                          ! Removes any characters in one string from another string.  
-!  S s_swap ( s1, s2 )                               ! Swaps two strings.
-!  S s_tab_blank ( s )                               ! replaces each TAB character by one space.
-!  S s_tab_blanks                                    ! replaces TAB characters by 6 spaces.
-!  S s_ch_blank ( s, c )                             ! Replaces each occurrence of a particular character by a blank.
-!  F s_blank_delete ( s )                            ! Removes blanks from a string, left justifying the remainder.
-!  S s_blanks_delete ( s )                           ! Replaces consecutive blanks by one blank.
-!  S s_blanks_insert ( s, ilo, ihi )                 ! Inserts blanks into a string, sliding old characters over
-!  S s_s_delete ( s, sub, irep )                     ! Removes all occurrences of a substring from a string
-!  F s_delete ( s, sub)                              ! Removes all occurrences of a substring from a string.
-!  F upper ( s )                                     ! Returns an uppercase version of a string
-!  F lower ( s )                                     ! Returns a lowercase version of a string.
-!  F len_noctrl ( s )                                ! returns the length of a string up to the last non-control and blank character.
-!  F s_cap_word ( s )                                ! Capitalizes the first character in a word s
-!  F s_to_r                                          ! reads a real number from a string
-!  F s_to_r_perc(str,rnum)                           !  Convert percentage in fraction. If '%' is absent string is read as fraction
-!  S s_to_i                                          ! reads a integer number from a string
-!  S ch_eqi                                          ! is a case insensitive comparison of two characters for equality
-!  F s_eqi ( s1, s2 )                                ! is a case insensitive comparison of two strings for equality.  
-!  F s_eqidb ( s1, s2 )                              ! compares two strings, ignoring case and blanks.
-!  F match_word(string,word) result(match)           ! true if the first characters of string match with word (case insensitive)
-!  F word_is_contained(smallword,bigword,minc)       ! true if almost minc character of smallword are contained in bigword
-!  S ch_cap                                          ! capitalizes a single character
-!  S ch_to_digit                                     ! returns the integer value of a base 10 digit.
-!  F centra_str(string,n)                            ! Centra una stringa in un campo di ampiezza n
-!  F catstringpar(string,par,fmtt)                   ! Concatena una stringa con un reale in formato fmtt
-!  F number_to_format(vet)                           ! genera un formato fortran da un numero o vettore di numeri
-!  F string_locate(str,strvet,vet)                   ! Cerca la prima posizione di str nel vettore strvet
-!  F ch_is_alpha                                     ! returns TRUE if C is an alphabetic character.
-!  F ch_is_control ( c )                             ! is TRUE if C is a control character.
-!  F ch_is_digit ( c )                               ! is TRUE if C is a decimal digit
-!  F ch_is_upper ( c )                               ! is TRUE if C is an upper case letter.
-!  F ch_is_lower ( c )                               ! is TRUE if C is a lower case letter.
-!  F ch_is_space ( c )                               ! is TRUE if C is a whitespace character.
-!  F s_is_alpha                                      ! returns TRUE if the string contains only alphabetic characters.
-!  F s_is_alphanumeric ( s )                         ! returns TRUE if the string contains only alphanumeric characters.
-!  F s_is_i ( s, i )                                 ! is TRUE if a string represents an integer.
-!  S s_is_r                                          ! returns TRUE if the string represents a real number
-!  F s_is_digit ( s )                                ! returns TRUE if a string contains only decimal digits.
-!  S s_detag ( s )                                   ! removes from a string all substrings marked by brackets.
-!  S s_detags ( s )                                  ! removes from a string all substrings marked by square brackets.
-!  F string_esd(val,std)  result(str)                ! create string: val(std)
-!  F first_digit(rnum) result(fdigit)                ! First digit of an integer number
-!  F ndigits(num)                                    ! Count digits in a integer number
-!  F xround(num,sig)                                 ! round a number to n significant digits
-!  F string_sigf(val,sig)                            ! genera stringa da val con sig cifre significative
-!  F r_to_s(x)                                       ! writes a real into a left justified character string
-!  F i_to_s ( intval )                               ! converts an integer to a left-justified string.
-!  F i_to_s1 ( intval , nf)                          ! Write number in a allocatable string of length nf
-!  S set_row_list(vet,ktype,ival,rval,sval,kpr)      ! Scrive una singola riga di una tabella
-!  F s_in_quotes(string)  result(str)                ! Enclose string in double quotes
-!  F rem_quotes(string)  result(str)                 ! Remove quotes
-!  S get_string_in_brackets(str,strb,ier)            ! Estrai la stringa tra parentesi
-!  S write_svet(svet,nvet,kpr,word)                  ! Scrivi sulla stessa riga un vettore di stringhe
-!  S s_c_append(str,c)                               ! Append char to string only if char doesn't exist in the string
-!  F cat_svet(svet,nvet)  result(str)                ! Cat string vector in an allocatable string
-!  F cat_ivet(ivet,sep)  result(str)                 ! Cat array of integers in a string
-!  S write_title(kpr,title)                          ! Write title in a frame
-!  F time_string                                     ! print the current time
-!  F date_time_string                                ! print the current date and time
-!  F all_ch_eq(str,ch)                               ! check if all characters in str are equal to ch
-!  F is_in_brackets(str,pos)                         ! Check if pos is in brackets
-!  S write_string_bin(aunit,string)                  ! Write variable string on binary file
-!  F read_string_bin(aunit,string)                   ! Read variable string from binary file
-!  S s_find_duplicate(svet,vd)                       ! Find duplicate in an array of strings. 
-!  S s_delete_copies(svet,nsv,vd,ndel)               ! Delete multiple copies in array svet if ncopies > ndel
-!  S s_trim_zeros ( s )                              ! Removes trailing zeros from a string.
+!  S filtra(string)                                     ! Remove empty space
+!  S Cutst(line1,nlong1,line2,nlong2)                   ! Removes the first word of the input String.
+!  S Cutsta(line1,nlong1,line2,nlong2)                  ! Removes the first word of the input String. (NEW allocatable)
+!  S Getnum(line,vet,ivet,iv)                           ! Converts a string to numbers and write on VET/IVET if real/integer.
+!  S Getnum1(line,vet,ivet,iv)                          ! Converts a string to numbers and write on VET/IVET if real/integer (NEW with allocation)
+!  S get_words(line,wordv,nword)                        ! Estrai da line tutte le stringhe separate da spazi in wordv
+!  S get_words1(line,wordv,nword)                       ! Estrai da line tutte le stringhe separate da spazi in wordv (NEW without allocation)
+!  S get_words_quotes(line,wordv,nword)                 ! Estrai da line solo le stringhe in parentesi
+!  S get_words_quotes_a(line,wordv,nword,btype)         ! allocatable version of get_words_quotes
+!  S get_words_quotes1(line,wordv,nword)                ! Estrai da line le stringhe in parentesi e non
+!  S parse_line_reals(line,posv,rnum,ier)               ! Get real number from string in position pos. ier > 0 contains position
+!  S get_next_number(string,pos,numb,ier)               ! Get the next number starting from position pos
+!  F U_Case(Text)                                       ! Conversion to upper case, text is not modified
+!  F L_Case(Text)                                       ! Conversion to lower case, text is not modified
+!  S Init_Err_String()                                  ! Initializes general error variables
+!  F Lung (Stringa)                                     ! Lenght of stringa
+!  F remc0(s0)                                          ! Removes char(0) from the end of s0
+!  S s_trim_char ( str , c)                             ! Removes trailing c from a string
+!  F add_c0(str,pos)                                    ! Add char(0) non oltre il carattere pos
+!  S s_cat0(s1,s2)                                      ! Joins s1 and s2 separated with blank. Output in s1
+!  S s_catend(s1,s2)                                    ! Joins s1 and s2 plus char(13)//char(10) for end of row. Output in s1
+!  S sort_heap_external ( n, indx, i, j, isgn )         ! Externally sorts a list of items into ascending order.
+!  S svec_sort_heap_a ( n, a )                          ! Ascending sorts a vector of character strings using heap sort.
+!  S svec_sort_heap_a_index ( n, sarray, indx )         ! Does a case-sensitive indexed heap sort of a vector of strings
+!  S s_rep_ch ( s, c1, c2 )                             ! Replaces all occurrences of one character by another
+!  S s_rep ( s, sub1, sub2, irep )                      ! Replaces all occurrences of SUB1 by SUB2 in a string.
+!  F s_replace(s, sub1, sub2)                           ! Replaces all occurrences of SUB1 by SUB2 in a string.
+!  F s_replace_by_blanks(s, sub1)                       ! Replaces all occurrences of SUB1 by blanks
+!  F s_u2b ( s )                                        ! Replaces underscores by blanks.
+!  S s_filter(str)                                      ! Filtra una stringa
+!  S s_chop ( s, ilo, ihi )                             ! "Chops out" a portion of a string, and closes up the hole
+!  F string_from_time(time)  result(stime)              ! Converts time in string. Time is expressed in seconds
+!  S s_s_insert ( s, ipos, s2 )                         ! Inserts a substring into a string.
+!  S s_set_delete ( s, s2 )                             ! Removes any characters in one string from another string.  
+!  S s_swap ( s1, s2 )                                  ! Swaps two strings.
+!  S s_tab_blank ( s )                                  ! replaces each TAB character by one space.
+!  S s_tab_blanks                                       ! replaces TAB characters by 6 spaces.
+!  S s_ch_blank ( s, c )                                ! Replaces each occurrence of a particular character by a blank.
+!  F s_blank_delete ( s )                               ! Removes blanks from a string, left justifying the remainder.
+!  S s_blanks_delete ( s )                              ! Replaces consecutive blanks by one blank.
+!  S s_blanks_insert ( s, ilo, ihi )                    ! Inserts blanks into a string, sliding old characters over
+!  S s_s_delete ( s, sub, irep )                        ! Removes all occurrences of a substring from a string
+!  F s_delete ( s, sub)                                 ! Removes all occurrences of a substring from a string.
+!  F upper ( s )                                        ! Returns an uppercase version of a string
+!  F lower ( s )                                        ! Returns a lowercase version of a string.
+!  F len_noctrl ( s )                                   ! returns the length of a string up to the last non-control and blank character.
+!  F s_cap_word ( s )                                   ! Capitalizes the first character in a word s
+!  F s_to_r                                             ! reads a real number from a string
+!  F s_to_r_perc(str,rnum)                              !  Convert percentage in fraction. If '%' is absent string is read as fraction
+!  S s_to_i                                             ! reads a integer number from a string
+!  S ch_eqi                                             ! is a case insensitive comparison of two characters for equality
+!  F s_eqi ( s1, s2 )                                   ! is a case insensitive comparison of two strings for equality.  
+!  F s_eqidb ( s1, s2 )                                 ! compares two strings, ignoring case and blanks.
+!  F match_word(string,word) result(match)              ! true if the first characters of string match with word (case insensitive)
+!  F word_is_contained(smallword,bigword,minc)          ! true if almost minc character of smallword are contained in bigword
+!  S ch_cap                                             ! capitalizes a single character
+!  S ch_to_digit                                        ! returns the integer value of a base 10 digit.
+!  F centra_str(string,n)                               ! Centra una stringa in un campo di ampiezza n
+!  F catstringpar(string,par,fmtt)                      ! Concatena una stringa con un reale in formato fmtt
+!  F number_to_format(vet)                              ! genera un formato fortran da un numero o vettore di numeri
+!  F string_locate(str,strvet,vet)                      ! Cerca la prima posizione di str nel vettore strvet
+!  S string_locate_all(str,strvet,vet,n)                ! Find all occurences of str in array strvet
+!  F ch_is_alpha                                        ! returns TRUE if C is an alphabetic character.
+!  F ch_is_control ( c )                                ! is TRUE if C is a control character.
+!  F ch_is_digit ( c )                                  ! is TRUE if C is a decimal digit
+!  F ch_is_upper ( c )                                  ! is TRUE if C is an upper case letter.
+!  F ch_is_lower ( c )                                  ! is TRUE if C is a lower case letter.
+!  F ch_is_space ( c )                                  ! is TRUE if C is a whitespace character.
+!  F s_is_alpha                                         ! returns TRUE if the string contains only alphabetic characters.
+!  F s_is_alphanumeric ( s )                            ! returns TRUE if the string contains only alphanumeric characters.
+!  F s_is_i ( s, i )                                    ! is TRUE if a string represents an integer.
+!  S s_is_r                                             ! returns TRUE if the string represents a real number
+!  F s_is_digit ( s )                                   ! returns TRUE if a string contains only decimal digits.
+!  S s_detag ( s )                                      ! removes from a string all substrings marked by brackets.
+!  S s_detags ( s )                                     ! removes from a string all substrings marked by square brackets.
+!  F string_esd(val,std)  result(str)                   ! create string: val(std)
+!  F first_digit(rnum) result(fdigit)                   ! First digit of an integer number
+!  F ndigits(num)                                       ! Count digits in a integer number
+!  F xround(num,sig)                                    ! round a number to n significant digits
+!  F string_sigf(val,sig)                               ! genera stringa da val con sig cifre significative
+!  F r_to_s(x)                                          ! writes a real into a left justified character string
+!  F i_to_s ( intval )                                  ! converts an integer to a left-justified string.
+!  F i_to_s1 ( intval , nf)                             ! Write number in a allocatable string of length nf
+!  S set_row_list(vet,ktype,ival,rval,sval,kpr)         ! Scrive una singola riga di una tabella
+!  F s_in_quotes(string)  result(str)                   ! Enclose string in double quotes
+!  F rem_quotes(string)  result(str)                    ! Remove quotes
+!  S get_string_in_brackets(str,strb,ier)               ! Estrai la stringa tra parentesi
+!  S write_svet(svet,nvet,kpr,word)                     ! Scrivi sulla stessa riga un vettore di stringhe
+!  S s_c_append(str,c)                                  ! Append char to string only if char doesn't exist in the string
+!  F cat_svet(svet,nvet)  result(str)                   ! Cat string vector in an allocatable string
+!  F cat_ivet(ivet,sep)  result(str)                    ! Cat array of integers in a string
+!  S write_title(kpr,title)                             ! Write title in a frame
+!  F time_string                                        ! print the current time
+!  F date_time_string                                   ! print the current date and time
+!  F all_ch_eq(str,ch)                                  ! check if all characters in str are equal to ch
+!  F is_in_brackets(str,pos)                            ! Check if pos is in brackets
+!  S write_string_bin(aunit,string)                     ! Write variable string on binary file
+!  F read_string_bin(aunit,string)                      ! Read variable string from binary file
+!  S s_find_duplicate(svet,vd)                          ! Find duplicate in an array of strings. 
+!  S s_delete_copies(svet,nsv,vd,ndel)                  ! Delete multiple copies in array svet if ncopies > ndel
+!  S s_trim_zeros ( s )                                 ! Removes trailing zeros from a string.
+!  F find_string_in_array(string, array) result(pos)    ! Find string in array of string. Return 0 if string is absent
+!  S write_formatted_message(unt,message_type,msg,ampl) ! Write message in a box splitting at LF o blank
 
  implicit none
 
@@ -5053,116 +5056,114 @@ end function ch_is_space
       end function r_to_s
 
  !----------------------------------------------------------------------------------------------------
-#if 0
-   function i_to_s ( intval ) result(s)
-!
-!  I_TO_S_LEFT converts an integer to a left-justified string.
-!
-!  Examples:
-!
-!    Assume that S is 6 characters long:
-!
-!    INTVAL  S
-!
-!         1  1
-!        -1  -1
-!         0  0
-!      1952  1952
-!    123456  123456
-!   1234567  ******  <-- Not enough room!
-!
-!  Modified:
-!
-!    28 July 2000
-!
-!  Author:
-!
-!    John Burkardt
-!
-!  Parameters:
-!
-!    Input, integer INTVAL, an integer to be converted.
-!
-!    Output, character ( len = * ) S, the representation of the integer.
-!    The integer will be left-justified.  If there is not enough space,
-!    the string will be filled with stars.
-!
-   implicit none
-
-   character c
-   integer i
-   integer idig
-   integer ihi
-   integer ilo
-   integer intval
-   integer ipos
-   integer ival
-   character ( len = 100 ) s
-
-   s = ' '
-
-   ilo = 1
-   ihi = len ( s )
-
-   if ( ihi <= 0 ) then
-     return
-   end if
-!
-!   Make a copy of the integer.
-!
-   ival = intval
-!
-!   Handle the negative sign.
-!
-   if ( ival < 0 ) then
-
-     if ( ihi <= 1 ) then
-       s(1:1) = '*'
-       return
-     end if
-
-     ival = -ival
-     s(1:1) = '-'
-     ilo = 2
-
-   end if
-!
-!   The absolute value of the integer goes into S(ILO:IHI).
-!
-   ipos = ihi
-!
-!   Find the last digit of IVAL, strip it off, and stick it into the string.
-!
-   do
-
-     idig = mod ( ival, 10 )
-     ival = ival / 10
-
-     if ( ipos < ilo ) then
-       do i = 1, ihi
-         s(i:i) = '*'
-       end do
-       return
-     end if
-
-     call digit_to_ch ( idig, c )
-
-     s(ipos:ipos) = c
-     ipos = ipos - 1
-
-     if ( ival == 0 ) then
-       exit
-     end if
-
-   end do
-!
-!   Shift the string to the left.
-!
-   s(ilo:ilo+ihi-ipos-1) = s(ipos+1:ihi)
-   s(ilo+ihi-ipos:ihi) = ' '
- 
-   end function i_to_s
-#endif
+!corr   function i_to_s ( intval ) result(s)
+!corr!
+!corr!  I_TO_S_LEFT converts an integer to a left-justified string.
+!corr!
+!corr!  Examples:
+!corr!
+!corr!    Assume that S is 6 characters long:
+!corr!
+!corr!    INTVAL  S
+!corr!
+!corr!         1  1
+!corr!        -1  -1
+!corr!         0  0
+!corr!      1952  1952
+!corr!    123456  123456
+!corr!   1234567  ******  <-- Not enough room!
+!corr!
+!corr!  Modified:
+!corr!
+!corr!    28 July 2000
+!corr!
+!corr!  Author:
+!corr!
+!corr!    John Burkardt
+!corr!
+!corr!  Parameters:
+!corr!
+!corr!    Input, integer INTVAL, an integer to be converted.
+!corr!
+!corr!    Output, character ( len = * ) S, the representation of the integer.
+!corr!    The integer will be left-justified.  If there is not enough space,
+!corr!    the string will be filled with stars.
+!corr!
+!corr   implicit none
+!corr
+!corr   character c
+!corr   integer i
+!corr   integer idig
+!corr   integer ihi
+!corr   integer ilo
+!corr   integer intval
+!corr   integer ipos
+!corr   integer ival
+!corr   character ( len = 100 ) s
+!corr
+!corr   s = ' '
+!corr
+!corr   ilo = 1
+!corr   ihi = len ( s )
+!corr
+!corr   if ( ihi <= 0 ) then
+!corr     return
+!corr   end if
+!corr!
+!corr!   Make a copy of the integer.
+!corr!
+!corr   ival = intval
+!corr!
+!corr!   Handle the negative sign.
+!corr!
+!corr   if ( ival < 0 ) then
+!corr
+!corr     if ( ihi <= 1 ) then
+!corr       s(1:1) = '*'
+!corr       return
+!corr     end if
+!corr
+!corr     ival = -ival
+!corr     s(1:1) = '-'
+!corr     ilo = 2
+!corr
+!corr   end if
+!corr!
+!corr!   The absolute value of the integer goes into S(ILO:IHI).
+!corr!
+!corr   ipos = ihi
+!corr!
+!corr!   Find the last digit of IVAL, strip it off, and stick it into the string.
+!corr!
+!corr   do
+!corr
+!corr     idig = mod ( ival, 10 )
+!corr     ival = ival / 10
+!corr
+!corr     if ( ipos < ilo ) then
+!corr       do i = 1, ihi
+!corr         s(i:i) = '*'
+!corr       end do
+!corr       return
+!corr     end if
+!corr
+!corr     call digit_to_ch ( idig, c )
+!corr
+!corr     s(ipos:ipos) = c
+!corr     ipos = ipos - 1
+!corr
+!corr     if ( ival == 0 ) then
+!corr       exit
+!corr     end if
+!corr
+!corr   end do
+!corr!
+!corr!   Shift the string to the left.
+!corr!
+!corr   s(ilo:ilo+ihi-ipos-1) = s(ipos+1:ihi)
+!corr   s(ilo+ihi-ipos:ihi) = ' '
+!corr 
+!corr   end function i_to_s
  !----------------------------------------------------------------------------------------------------
 
    function i_to_s ( intval ) result(s)
@@ -5339,6 +5340,33 @@ end function ch_is_space
    endif
 !
    end function string_locate
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine string_locate_all(str,strvet,vet,n)
+!
+!  Find all occurences of str in array strvet
+!
+   character(len=*), intent(in)                :: str     ! stringa
+   character(len=*), dimension(:), intent(in)  :: strvet  ! vettore sul quale eseguire il controllo
+   integer, dimension(:), intent(out)          :: vet     ! should be allocated at the same size of strvet
+   integer, intent(out)                        :: n       ! number of occurences
+   integer                                     :: ini,pos
+!
+   ini = 1
+   do
+      pos = string_locate(str,strvet(ini:),exact=.false.)
+      if (pos > 0) then
+          n = n + 1
+          vet(n) = pos + ini - 1
+          if (vet(n) == size(strvet)) exit
+          ini = vet(n) + 1
+      else
+          exit
+      endif
+   enddo
+!
+   end subroutine string_locate_all
 
 !----------------------------------------------------------------------------------------------------
 
@@ -6047,5 +6075,221 @@ end function ch_is_space
    endif
 !
    end function find_string_pos
+
+!--------------------------------------------------------------------------------------------------------
+
+   integer function find_string_in_array(string, array) result(pos)
+!
+!  Find string in array of string. Return 0 if string is absent
+!
+   character(len=*), intent(in)               :: string
+   character(len=*), dimension(:), intent(in) :: array
+   integer                                    :: i
+!
+   pos = 0
+   do i=1,size(array)
+      if (s_eqidb(string,array(i))) then
+          pos = i
+          return
+      endif
+   enddo
+!
+   end function find_string_in_array
+
+!--------------------------------------------------------------------------------------------------------
+
+   subroutine write_formatted_message(unt,message_type,msg,ampl)
+!
+!  Write message in a box splitting at LF o blank
+!
+   integer, intent(in)                   :: unt
+   character(len=*), intent(in)          :: message_type   ! short string for message (es. ERROR) or blank
+   character(len=*), intent(in)          :: msg            ! the message
+   integer, intent(in), optional         :: ampl           ! total amplitude
+   character(len=len_trim(adjustl(msg))) :: msg0
+   integer                               :: lerr,pos,start,amp,ends,amp0,pos0,i,ampe
+   integer, parameter                    :: PAD = 1        ! padding
+   integer, parameter                    :: DEF_AMP = 74
+   integer, parameter                    :: SPACE_LEFT = 2
+   character(len=:), allocatable         :: sform,sform1
+!
+   msg0 = trim(adjustl(msg))
+   lerr = len_trim(msg0)
+   if (len_trim(message_type) == 0 .and. lerr == 0) return
+
+   if (present(ampl)) then
+       amp0 = ampl
+       if (amp0 <= 0) amp0 = DEF_AMP
+   else
+       amp0 = DEF_AMP
+   endif
+   ampe = amp0 - 2   ! -2 for '*' at beginning and end
+   amp = ampe - PAD*2
+!
+   sform = "("//i_to_s(SPACE_LEFT)//"x,"//i_to_s(amp0)//"('*'))"
+   write(unt,sform)
+!
+   sform1 = "("//i_to_s(SPACE_LEFT)//"x,"//"a)"
+   if (len_trim(message_type) > 0) then
+       write(unt,sform1) '*'//centra_str(message_type,ampe)//'*'
+   endif
+!
+   start = 1
+   ends = min(lerr,amp)
+   do 
+      pos = 0
+!
+!     Last line: search are not necessary
+      if (ends == lerr) then
+          pos = 1
+          pos0 = ends !- start + 1 + start - 1
+          call s_rep_ch(msg0(start:ends),char(10),' ')
+      endif
+!
+!     search for linefeed
+      if (ends < lerr) then
+          if (msg0(ends+1:ends+1) == char(10)) then
+              pos = 1
+              pos0 = ends + 1
+              msg0(pos0:pos0) = ' '
+          endif
+      endif
+      if (pos == 0) then
+          pos = index(msg0(start:ends),char(10))
+          if (pos > 0) then
+              pos0 = pos+start-1
+              msg0(pos0:pos0) = ' '
+          endif
+      endif
+      if (pos == 0) then
+!
+!         search for empty space
+          if (ends < lerr) then   
+              if (msg0(ends+1:ends+1) == ' ') then
+                  pos = 1   !ends - start + 1
+                  pos0 = ends
+              endif
+          endif
+          if (pos == 0) then
+              pos = index(msg0(start:ends),' ',back=.true.)
+              if (pos == 0) then
+                  pos0 = ends  ! truncate the string
+              else
+                  pos0 = pos+start-1
+              endif
+          endif
+      endif
+
+      write(unt,sform1) '*'//centra_str(msg0(start:pos0),ampe)//'*'
+      start = pos0 + 1
+      if (start > lerr) exit
+!
+!     jump empty char at left
+      do i=start,lerr
+         if (msg0(i:i) == ' ' .or. msg0(i:i) == char(10)) then
+             start = start + 1
+         else
+             exit
+         endif
+      enddo
+
+      ends = min(lerr,start+amp-1)
+   enddo
+!
+   write(unt,sform)
+!
+   end subroutine write_formatted_message
+
+!--------------------------------------------------------------------------------------------------------
+
+   function toFortranString(str,lens)
+!
+!  Convert an array of character(kind=c_char,len=1) in a fortran string
+!
+   use iso_c_binding, only: c_char, c_int
+   character(kind=c_char), intent(in) :: str(*)
+   integer(c_int), intent(in)         :: lens
+   character(len=:), allocatable      :: toFortranString
+   integer                            :: i
+
+   allocate(character(lens) :: toFortranString)
+   forall(i = 1:lens) toFortranString(i:i) = str(i)
+
+   end function toFortranString
+
+!--------------------------------------------------------------------------------------------------------
+
+   function toCString(str) result(cstr)
+!
+!  Convert a fortran string in an array of character(kind=c_char,len=1)
+!
+   use iso_c_binding, only: c_char, c_null_char
+   character(len=*), intent(in)                       :: str
+   character(kind=c_char), dimension(len_trim(str)+1) :: cstr
+   integer                                            :: i,lens
+!
+   lens = len_trim(str)
+   do i=1,lens
+      cstr(i) = str(i:i)
+   enddo
+   cstr(lens+1) = c_null_char
+!
+   end function toCString
+
+!--------------------------------------------------------------------------------------------------------
+
+   function f_to_c(fortran_string)
+!
+!  Convert fortran string in C string
+!
+   use iso_c_binding, only: c_char, c_null_char
+   character (len=*)                                      :: fortran_string
+   character (len=len_trim(fortran_string)+1,kind=c_char) :: f_to_c
+!
+   f_to_c = trim(fortran_string)//c_null_char
+!
+   end function f_to_c
+
+!!--------------------------------------------------------------------------------------------------------
+!
+!   function c_to_f(c_string)
+!!
+!!  Convert C string in a fortran string
+!!
+!   use iso_c_binding, only: c_char, c_null_char
+!   character (len=:), allocatable :: c_to_f
+!   character (len=*,kind=c_char)  :: c_string
+!   integer                        :: c_length
+!   integer                        :: i
+!!
+!   c_length = 1
+!   c_to_f = " "
+!   do i=1,len(c_string)
+!      if ( c_string(i:i) == c_null_char ) exit
+!      c_length = c_length+1
+!   end do
+!   c_length = c_length -1
+!   c_to_f = c_string(1:c_length)
+!!
+!   end function c_to_f
+!
+!!--------------------------------------------------------------------------------------------------------
+
+   function c_to_f(c_string)
+!
+!  Convert C string in a fortran string
+!
+   use iso_c_binding, only: c_char, c_null_char
+   character (kind=c_char), intent(in) :: c_string(:)
+   character (len=:), allocatable      :: c_to_f
+   integer                             :: i
+!
+   c_to_f = " "
+   do i=1,size(c_string)
+      if ( c_string(i) == c_null_char ) exit
+      c_to_f(i:i) = c_string(i)
+   end do
+!
+   end function c_to_f
 
 END MODULE STRUTIL

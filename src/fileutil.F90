@@ -331,6 +331,16 @@ CONTAINS
 
   !---------------------------------------------------------------------------------------------
 
+   function file_basename(filename)
+   character(len=*), intent(in)  :: filename
+   character(len=:), allocatable :: file_basename
+
+   file_basename = file_rem_ext(file_get_name(filename))
+   
+   end function file_basename
+
+  !---------------------------------------------------------------------------------------------
+
    function file_change_ext(filename,ext) result(sfile)
 !
 !  Change extension for filename
@@ -488,11 +498,16 @@ CONTAINS
    integer, intent(inout)          :: nline
    character(len=*), intent(inout) :: line
    integer, intent(out)            :: ier
+   integer                         :: nline_sav
 !
+   nline_sav = nline
    do
       nline = nline + 1
       read(fhandle,'(a)',iostat=ier)line
-      if (ier < 0) exit
+      if (ier < 0) then
+          nline = nline_sav
+          exit
+      endif
       if(index(line,keystr) > 0 ) exit
    enddo
 !
@@ -631,6 +646,20 @@ CONTAINS
    
    end function get_line
 
+  !--------------------------------------------------------------------------
+
+   subroutine set_record_pos(unitfile,pos)
+   integer, intent(in) :: unitfile
+   integer, intent(in) :: pos
+   integer             :: i
+!
+   rewind(unitfile)
+   do i=1,pos
+      read(unitfile,*)
+   enddo
+!   
+   end subroutine set_record_pos
+
   !---------------------------------------------------------------------------------------------
 
    logical function jump_non_numeric(aunit)  result(iend)
@@ -640,13 +669,17 @@ CONTAINS
    USE strutil
    integer, intent(IN)           :: aunit
    character(len=:), allocatable :: line
+   integer                       :: nrec 
 !
    iend = .true.
+   nrec = 0
    do while(get_line(aunit,line,trimmed=.true.))
+      nrec = nrec + 1
       if (len_trim(line) == 0) cycle
       if (ch_is_digit(line(1:1))) then
           iend = .false.
-          backspace(aunit)
+          !backspace(aunit,iostat=ier) ! don't trust on basckspace after get_line with intel
+          call set_record_pos(aunit,nrec-1)
           return
       endif
    enddo

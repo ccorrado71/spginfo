@@ -27,14 +27,13 @@ MODULE spginfom
 !S string_to_symop(strop,symop,ier)                               Convert symbol to symmetry operator
 !S symop_to_string(symop,strop)                                   Convert symmetry operator in symbol
 !S symop_norm_trans(symop)                                        Normalize translation of symmetry operator
-!F equal_matrix(mat1,mat2)                                        mat1 is equal to mat2 ?
-!F equal_vector(vet1,vet2)                                        vet1 is equal to vet2 ?
 !S calc_origins(spaceg)                                           Return the number of alternate origins for spacegroup
 !S get_indipendent_origins(spaceg)                                Get the indipendend origins removing the redundant origins
 !F get_spg_info(hm_symbol,info)                                   Find number and simboli a partire dall' H-M symbol
 !S range_to_limits(srange,limit,equal)                            Convert string of type 0<=y<=1/4 in limit = (/0,0.25/) equal = (/1,1/)
 !F symop_equal(symop1,symop2)                                     Compare two symmetry operators
 !F symop_equal_sets(nsym1, symop1, nsym2, symop2)                 Compare an entire set of symmetry operators
+!F spg_equal(spg1,spg2)                                           Check if spg1 and spg2 are equal
 !F lattice_type(coper,ncoper)                                     Get lattice symbol from centering operators
 !F lattice_symbol(spaceg)                                         Extract the lattice symbol
 !F rhomb_axes(spg,cell)                                           Check for rhombohedral axes
@@ -47,11 +46,12 @@ MODULE spginfom
 !F integer function lattice_system(spg,cell)  result(jsys)        Crystal system + axis 
 !S save_space_bin(unitbin,space)                                  Write space group on binary file
 !S read_space_bin(unitbin,err)                                    Read space group from binary file
-!S print_spg_freq(cs,kpr)                              Print for crystal system cs list of space groups sorted for frequency
+!S print_spg_freq(cs,kpr)                                         Print for crystal system cs list of space groups sorted for frequency
 !S make_frequency(freq,kpr)                                       Call this subroutine to create info about frequency of spg
 !F is_chiral(spg)                                                 Is spg chiral?
 !F get_extinction_symbol(spg)                                     Get extinction symbol
-!F function z_from_spg(spgnum)                                    Z from spg number
+!F z_from_spg(spgnum)                                             Z from spg number
+!F is_standardize(spg)                                            Check if space group can be standardized
 
    USE symm_table
    USE arrayutil, only: container_type
@@ -107,6 +107,8 @@ MODULE spginfom
         logical                          :: standard = .false.   ! True for standard choice of origin
         character(len=46)                :: pmat = ' '           ! Transformation matrix to non-conventional setting
         character(len=17)                :: pmat1 = ' '          ! Transformation matrix to standard setting
+     
+        integer                          :: id = -1              ! Index for database of spacegroups
         
    contains
 
@@ -124,7 +126,9 @@ MODULE spginfom
         procedure :: is_chiral
         procedure :: extinction_symbol => get_extinction_symbol
         procedure :: spg_frequency
-        procedure :: get_pmat, get_pmat1
+        procedure :: get_pmat
+        procedure :: get_pmat1
+        procedure :: get_id
 
         procedure, private :: polar3
         procedure, private :: polar1
@@ -145,8 +149,6 @@ MODULE spginfom
       module procedure get_spg_info_hm, get_spg_info_num
    end interface
 
-   !character(len=256), private :: spg_filename = '~/bin/syminfo.lib'
-   !character(len=256), private :: spg_filename = '/home/corrado/bin/syminfo.lib'
    character(len=256), private :: spg_filename = 'syminfo.lib'
 
    character(len=*), dimension(0:13), parameter, private :: laue_name=[ &
@@ -463,13 +465,12 @@ CONTAINS
    use errormod
    use strutil
    use arrayutil
+   use nrutil
    type(error_type), intent(out)  :: err
    type(file_handle)              :: fspg
    integer                        :: jfile,pos,numspg,i,j,num,spos
    character(len=:), allocatable  :: line
    type(sg_info_type)             :: info
-   !real, dimension(3,3)           :: pmat
-   !real, dimension(3)             :: pvet
 
    call fspg%fopen(spg_filename,'r')
    if (fspg%fail()) then
@@ -489,6 +490,7 @@ CONTAINS
           numspg = numspg + 1
           call spg_data(numspg)%init()
           spg_data(numspg)%defined = .true.
+          spg_data(numspg)%id = numspg - 1
           call spg_read_block(jfile,spg_data(numspg),.true.)
           info = get_spg_info(spg_data(numspg)%symbol_xhm,spos=spos)
           if (info%num > 0) then
@@ -509,7 +511,7 @@ CONTAINS
 !  Set standard 
    do i=1,NUMSPGMAX
       if (spg_index(i)%nat == 1) then
-          num = spg_index(i)%pos(1)  ! space group 1 is the standard
+          num = spg_index(i)%pos(1) 
           spg_data(num)%standard = .true.
       else
           ! The standard has pmat = identity matrix
@@ -517,20 +519,17 @@ CONTAINS
              num = spg_index(i)%pos(j) 
              if (s_eqi(spg_data(num)%pmat,'a,b,c')) then
                  spg_data(num)%standard = .true.
+                 if (j /= 1) then
+!                    Put the standard at 1 in the pos array
+                     call swap(spg_index(i)%pos(1),spg_index(i)%pos(j))
+                 endif
                  exit
              endif
           enddo
       endif
    enddo
 
-   !do i=1,NSPGTOT
-   !   write(70,'(a)')"========================================================"
-   !   write(70,'(i5,a10,5x,a)')spg_data(i)%num,trim(spg_data(i)%symbol_xhm),trim(spg_data(i)%pmat)
-   !   call string_to_pmatrix(spg_data(i)%pmat,pmat,pvet)
-   !   do j=1,3
-   !      write(70,'(3f10.3,f10.2)')pmat(j,:),pvet(j)
-   !   enddo
-   !enddo
+   !call spg_database_print()
 
    end subroutine load_spg_database
 
@@ -636,7 +635,8 @@ CONTAINS
                          ' Frequency(no. in CSD):  ',this%freq_no,'('//r_to_s(this%freq_perc,2)//'%), rank:',this%freq_rank
    if (.not.this%standard) then
        num = spg_index(this%num)%pos(1)
-       write(kpr,'(a)') ' Non-standard space group setting ('//trim(spg_data(num)%symbol_xhm)//')'
+       !write(kpr,'(a)') ' Non-standard space group setting ('//trim(spg_data(num)%symbol_xhm)//')'
+       write(kpr,'(a,i0,a)')' The standard setting of the space group ',this%num,' is '//trim(spg_data(num)%symbol_xhm)
    endif
    if (this%is_chiral()) then
        write(kpr,'(a)')  ' Chiral space group (Sohncke space group) found!'
@@ -992,6 +992,7 @@ CONTAINS
    this%defined = .true.
    this%pmat = 'a,b,c'
    this%pmat1 = 'a,b,c'
+   this%id = 0
    end subroutine set_p1
 
 !---------------------------------------------------------------------------
@@ -1133,151 +1134,149 @@ CONTAINS
    end subroutine spg_set_string
 
 !---------------------------------------------------------------------------
-#if 0
-   subroutine spg_set_cell(spg,cell)
-!
-!  Set cell parameters according the crystal system
-!
-   type(spaceg_type), intent(in) :: spg
-   real, dimension(6), intent(inout)       :: cell
-   logical                                 :: hexaxes, rhombaxes, par_present
-   real                                    :: acheck
-   integer                                 :: np,ncheck
-   real, parameter                         :: TOL = 0.01   !!!!!, EPS = epsilon(1.0)
-!
-   select case (spg%csys_code)
-     case (CS_Monoclinic)
-        !if (present(spg)) then
-            if (spg%symop(2)%rot(1,1) == spg%symop(2)%rot(2,2)) then      ! 2 lungo c
-                cell(4:5) = 90   ! al=bet=90
-            elseif (spg%symop(2)%rot(1,1) == spg%symop(2)%rot(3,3)) then  ! 2 lungo b
-                cell(4) = 90     ! al=gam=90
-                cell(6) = 90
-            elseif (spg%symop(2)%rot(2,2) == spg%symop(2)%rot(3,3)) then  ! 2 lungo a
-                cell(5:6) = 90   ! bet=gam=90
-            endif
-        !else
-        !    if (abs(cell(1)) > EPS) then
-        !        cell(4:5) = 90   ! al=bet=90
-        !    elseif (abs(cell(2)) > EPS) then
-        !        cell(4) = 90     ! al=gam=90
-        !        cell(6) = 90
-        !    elseif (abs(cell(3)) > EPS) then
-        !        cell(5:6) = 90   ! bet=gam=90
-        !    endif
-        !endif
-     case (CS_Orthorhombic)
-        cell(4:6) = 90.0     ! al=bet=gam=90
-     case (CS_Tetragonal)
-        cell(2) = cell(1)    ! b=a
-        cell(4:6) = 90.0     ! al=bet=gam=90
-     case (CS_Trigonal)
-        np = count(cell > 0)
-        if (np > 1) then
-            par_present = (cell(1) > 0 .and. cell(3) > 0) &    ! a,c present
-                      .or. (cell(2) > 0 .and. cell(3) > 0)      ! b,c present
-            if (par_present) then
-                select case(np)
-                  case (2)
-                      hexaxes = par_present 
-                           
-                  case default
-!
-!                   Check for a=b; al=bet=90 gam=120
-                        acheck = 0
-                        ncheck = 0
-                        if (cell(1) > 0 .and. cell(2) > 0) then
-                            ncheck = ncheck + 1
-                            acheck = acheck + abs(cell(1) - cell(2))
-                        endif
-                        if (cell(4) > 0) then
-                            ncheck = ncheck + 1
-                            acheck = acheck + abs(cell(4) - 90)
-                        endif
-                        if (cell(5) > 0) then
-                            ncheck = ncheck + 1
-                            acheck = acheck + abs(cell(5) - 90)
-                        endif
-                        if (cell(6) > 0) then
-                            ncheck = ncheck + 1
-                            acheck = acheck + abs(cell(6) - 120)
-                        endif
-                        hexaxes = acheck < TOL .and. ncheck > 0
-                end select
-            else
-                hexaxes = .false.
-            endif
-            if (hexaxes) then        ! hexagonal axes
-                if (cell(1) > 0) then
-                    cell(2) = cell(1)    !    b=a
-                else
-                    cell(1) = cell(2)    !    b=a
-                endif
-                cell(4:5) = 90.0     !    al=bet=90
-                cell(6) = 120        !    gam=120
-            else                     ! rhombohedral axes
-!
-!               Check for rhombohedral axes
-                par_present = (count(cell(1:3) > 0) > 0) .and. (count(cell(4:6) > 0) > 0) ! a/b/c present
-                                                                                          ! al/bet/gam present
-                if (par_present) then
-                    select case (np) 
-                       case (2) 
-                         rhombaxes = par_present
-
-                       case default
-                         ncheck = 0
-                         acheck = 0
-                         if (cell(1) > 0 .and. cell(2) > 0) then
-                             ncheck = ncheck + 1
-                             acheck = acheck + abs(cell(1) - cell(2))
-                         endif
-                         if (cell(1) > 0 .and. cell(3) > 0) then
-                             ncheck = ncheck + 1
-                             acheck = acheck + abs(cell(1) - cell(3))
-                         endif
-                         if (cell(2) > 0 .and. cell(3) > 0) then
-                             ncheck = ncheck + 1
-                             acheck = acheck + abs(cell(2) - cell(3))
-                         endif
-                         if (cell(4) > 0 .and. cell(5) > 0) then
-                             ncheck = ncheck + 1
-                             acheck = acheck + abs(cell(4) - cell(5))
-                         endif
-                         if (cell(4) > 0 .and. cell(6) > 0) then
-                             ncheck = ncheck + 1
-                             acheck = acheck + abs(cell(4) - cell(6))
-                         endif
-                         if (cell(5) > 0 .and. cell(6) > 0) then
-                             ncheck = ncheck + 1
-                             acheck = acheck + abs(cell(5) - cell(6))
-                         endif
-                         rhombaxes = acheck < TOL .and. ncheck > 0
-                    end select
-                else
-                     rhombaxes = .false.
-                endif
-                if (rhombaxes) then  !it is supposed that cell(1) has been provide
-                    cell(2:3) = cell(1)  !    c=b=a
-                    cell(5:6) = cell(4)  !    gam=bet=al
-                endif
-            endif
-        endif
-     case (CS_Hexagonal)
-        if (cell(1) > 0) then
-            cell(2) = cell(1)    ! b=a
-        else
-            cell(1) = cell(2)    ! b=a
-        endif
-        cell(4:5) = 90.0     ! al=bet=90
-        cell(6) = 120        ! gam=120
-     case (CS_Cubic)
-        cell(2:3) = cell(1)  ! b=c=a
-        cell(4:6) = 90.0     ! al=bet=gam=90
-   end select
-!
-   end subroutine spg_set_cell
-#endif
+!corr    subroutine spg_set_cell(spg,cell)
+!corr !
+!corr !  Set cell parameters according the crystal system
+!corr !
+!corr    type(spaceg_type), intent(in) :: spg
+!corr    real, dimension(6), intent(inout)       :: cell
+!corr    logical                                 :: hexaxes, rhombaxes, par_present
+!corr    real                                    :: acheck
+!corr    integer                                 :: np,ncheck
+!corr    real, parameter                         :: TOL = 0.01   !!!!!, EPS = epsilon(1.0)
+!corr !
+!corr    select case (spg%csys_code)
+!corr      case (CS_Monoclinic)
+!corr         !if (present(spg)) then
+!corr             if (spg%symop(2)%rot(1,1) == spg%symop(2)%rot(2,2)) then      ! 2 lungo c
+!corr                 cell(4:5) = 90   ! al=bet=90
+!corr             elseif (spg%symop(2)%rot(1,1) == spg%symop(2)%rot(3,3)) then  ! 2 lungo b
+!corr                 cell(4) = 90     ! al=gam=90
+!corr                 cell(6) = 90
+!corr             elseif (spg%symop(2)%rot(2,2) == spg%symop(2)%rot(3,3)) then  ! 2 lungo a
+!corr                 cell(5:6) = 90   ! bet=gam=90
+!corr             endif
+!corr         !else
+!corr         !    if (abs(cell(1)) > EPS) then
+!corr         !        cell(4:5) = 90   ! al=bet=90
+!corr         !    elseif (abs(cell(2)) > EPS) then
+!corr         !        cell(4) = 90     ! al=gam=90
+!corr         !        cell(6) = 90
+!corr         !    elseif (abs(cell(3)) > EPS) then
+!corr         !        cell(5:6) = 90   ! bet=gam=90
+!corr         !    endif
+!corr         !endif
+!corr      case (CS_Orthorhombic)
+!corr         cell(4:6) = 90.0     ! al=bet=gam=90
+!corr      case (CS_Tetragonal)
+!corr         cell(2) = cell(1)    ! b=a
+!corr         cell(4:6) = 90.0     ! al=bet=gam=90
+!corr      case (CS_Trigonal)
+!corr         np = count(cell > 0)
+!corr         if (np > 1) then
+!corr             par_present = (cell(1) > 0 .and. cell(3) > 0) &    ! a,c present
+!corr                       .or. (cell(2) > 0 .and. cell(3) > 0)      ! b,c present
+!corr             if (par_present) then
+!corr                 select case(np)
+!corr                   case (2)
+!corr                       hexaxes = par_present 
+!corr                            
+!corr                   case default
+!corr !
+!corr !                   Check for a=b; al=bet=90 gam=120
+!corr                         acheck = 0
+!corr                         ncheck = 0
+!corr                         if (cell(1) > 0 .and. cell(2) > 0) then
+!corr                             ncheck = ncheck + 1
+!corr                             acheck = acheck + abs(cell(1) - cell(2))
+!corr                         endif
+!corr                         if (cell(4) > 0) then
+!corr                             ncheck = ncheck + 1
+!corr                             acheck = acheck + abs(cell(4) - 90)
+!corr                         endif
+!corr                         if (cell(5) > 0) then
+!corr                             ncheck = ncheck + 1
+!corr                             acheck = acheck + abs(cell(5) - 90)
+!corr                         endif
+!corr                         if (cell(6) > 0) then
+!corr                             ncheck = ncheck + 1
+!corr                             acheck = acheck + abs(cell(6) - 120)
+!corr                         endif
+!corr                         hexaxes = acheck < TOL .and. ncheck > 0
+!corr                 end select
+!corr             else
+!corr                 hexaxes = .false.
+!corr             endif
+!corr             if (hexaxes) then        ! hexagonal axes
+!corr                 if (cell(1) > 0) then
+!corr                     cell(2) = cell(1)    !    b=a
+!corr                 else
+!corr                     cell(1) = cell(2)    !    b=a
+!corr                 endif
+!corr                 cell(4:5) = 90.0     !    al=bet=90
+!corr                 cell(6) = 120        !    gam=120
+!corr             else                     ! rhombohedral axes
+!corr !
+!corr !               Check for rhombohedral axes
+!corr                 par_present = (count(cell(1:3) > 0) > 0) .and. (count(cell(4:6) > 0) > 0) ! a/b/c present
+!corr                                                                                           ! al/bet/gam present
+!corr                 if (par_present) then
+!corr                     select case (np) 
+!corr                        case (2) 
+!corr                          rhombaxes = par_present
+!corr 
+!corr                        case default
+!corr                          ncheck = 0
+!corr                          acheck = 0
+!corr                          if (cell(1) > 0 .and. cell(2) > 0) then
+!corr                              ncheck = ncheck + 1
+!corr                              acheck = acheck + abs(cell(1) - cell(2))
+!corr                          endif
+!corr                          if (cell(1) > 0 .and. cell(3) > 0) then
+!corr                              ncheck = ncheck + 1
+!corr                              acheck = acheck + abs(cell(1) - cell(3))
+!corr                          endif
+!corr                          if (cell(2) > 0 .and. cell(3) > 0) then
+!corr                              ncheck = ncheck + 1
+!corr                              acheck = acheck + abs(cell(2) - cell(3))
+!corr                          endif
+!corr                          if (cell(4) > 0 .and. cell(5) > 0) then
+!corr                              ncheck = ncheck + 1
+!corr                              acheck = acheck + abs(cell(4) - cell(5))
+!corr                          endif
+!corr                          if (cell(4) > 0 .and. cell(6) > 0) then
+!corr                              ncheck = ncheck + 1
+!corr                              acheck = acheck + abs(cell(4) - cell(6))
+!corr                          endif
+!corr                          if (cell(5) > 0 .and. cell(6) > 0) then
+!corr                              ncheck = ncheck + 1
+!corr                              acheck = acheck + abs(cell(5) - cell(6))
+!corr                          endif
+!corr                          rhombaxes = acheck < TOL .and. ncheck > 0
+!corr                     end select
+!corr                 else
+!corr                      rhombaxes = .false.
+!corr                 endif
+!corr                 if (rhombaxes) then  !it is supposed that cell(1) has been provide
+!corr                     cell(2:3) = cell(1)  !    c=b=a
+!corr                     cell(5:6) = cell(4)  !    gam=bet=al
+!corr                 endif
+!corr             endif
+!corr         endif
+!corr      case (CS_Hexagonal)
+!corr         if (cell(1) > 0) then
+!corr             cell(2) = cell(1)    ! b=a
+!corr         else
+!corr             cell(1) = cell(2)    ! b=a
+!corr         endif
+!corr         cell(4:5) = 90.0     ! al=bet=90
+!corr         cell(6) = 120        ! gam=120
+!corr      case (CS_Cubic)
+!corr         cell(2:3) = cell(1)  ! b=c=a
+!corr         cell(4:6) = 90.0     ! al=bet=gam=90
+!corr    end select
+!corr !
+!corr    end subroutine spg_set_cell
 !---------------------------------------------------------------------------
 
    subroutine spg_set_cell_sc(spg,cell)
@@ -2199,33 +2198,6 @@ CONTAINS
    end subroutine symop_norm_trans
 
 !---------------------------------------------------------------------------
-!
-!   logical function equal_matrix(mat1,mat2)
-!!
-!!  mat1 is equal to mat2 ?
-!!
-!   real, dimension(:,:), intent(in) :: mat1,mat2
-!   equal_matrix = all (abs(mat1 - mat2) < epss)
-!   end function equal_matrix
-!
-!!!---------------------------------------------------------------------------
-!
-!   logical function equal_vector_r(vet1,vet2)
-!!
-!!  vet1 is equal to vet2 ?
-!!
-!   real, dimension(:), intent(in) :: vet1,vet2
-!   equal_vector_r = all (abs(vet1 - vet2) < epss)
-!   end function equal_vector_r
-!
-!!---------------------------------------------------------------------------
-!
-!   logical function equal_vector_i(vet1,vet2)
-!   integer, dimension(:), intent(in) :: vet1,vet2
-!   equal_vector_i = all (abs(vet1 - vet2) == 0)
-!   end function equal_vector_i
-!
-!!---------------------------------------------------------------------------
    
    subroutine calc_origins(spaceg)
 !
@@ -2429,6 +2401,18 @@ CONTAINS
    equal = equal_symop
 !
    end function symop_equal_sets
+
+!---------------------------------------------------------------------------
+
+   logical function spg_equal(spg1,spg2)
+!
+!  Check if spg1 and spg2 are equal
+!
+   type(spaceg_type), intent(in) :: spg1,spg2
+!
+   spg_equal = symop_equal_sets(spg1%nsymop, spg1%symop, spg2%nsymop, spg2%symop)
+!
+   end function spg_equal
 
 !---------------------------------------------------------------------------
 
@@ -3962,5 +3946,73 @@ CONTAINS
    std_spg = spg_data(num)
 !
    end function standard_spg
+
+!--------------------------------------------------------------------------------------
+
+   logical function is_standardize(spg)
+!
+!  Check if space group can be standardized
+!
+   type(spaceg_type), intent(in) :: spg
+!
+   is_standardize = .false.
+   if (.not.spg%defined .or. spg%num == 0 .or. spg%standard) return
+   if(len_trim(spg%pmat1) == 0) return
+   is_standardize = .true.
+!
+   end function is_standardize
+
+!--------------------------------------------------------------------------------------
+
+   integer function get_id(spg)
+!
+!  Get the index of spacegroup in the database
+!
+   class(spaceg_type), intent(in) :: spg
+!
+   get_id = spg%id
+!
+   end function get_id
+
+!--------------------------------------------------------------------------------------
+
+   subroutine spg_database_print()
+   use strutil
+   integer :: i
+   integer :: irep
+   character(len=40) :: spg_alternative
+
+   !do i=1,NUMSPGMAX
+   !   num = spg_index(i)%pos(1)
+   !   write(70,*)'NUM=',num,spg_data(num)%standard
+   !enddo
+
+   !do i=1,NSPGTOT
+   !   write(70,'(a)')"========================================================"
+   !   write(70,'(i5,a10,5x,a)')spg_data(i)%num,trim(spg_data(i)%symbol_xhm),trim(spg_data(i)%pmat)
+   !   call string_to_pmatrix(spg_data(i)%pmat,pmat,pvet)
+   !   do j=1,3
+   !      write(70,'(3f10.3,f10.2)')pmat(j,:),pvet(j)
+   !   enddo
+   !enddo
+
+   do i=1,NSPGTOT
+      if (spg_data(i)%symbol_xhm /= 'Unknown') then
+          if (spg_data(i)%csys_code == CS_Monoclinic) then
+!
+!             Strip ' 1' for space groups with 2 along b
+              if (spg_data(i)%axis_direction() == 'b') then
+                  spg_alternative = spg_data(i)%symbol_xhm 
+                  call s_s_delete(spg_alternative,' 1',irep)
+                  write(70,'(a,i4,a)')'{',spg_data(i)%num,', "'//trim(adjustl(spg_alternative))//'" },'
+                  cycle
+              endif
+          endif
+          write(70,'(a,i4,a)')'{',spg_data(i)%num,', "'//trim(adjustl(spg_data(i)%symbol_xhm))//'" },'
+      endif
+      if (spg_data(i)%num == 230) exit
+   enddo
+
+   end subroutine spg_database_print
 
 END MODULE spginfom

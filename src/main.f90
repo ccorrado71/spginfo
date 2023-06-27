@@ -130,6 +130,9 @@ end module test_space
               enddo
            enddo
   
+         case ('-list')
+           call print_extg(6)
+           
          case ('--version')
            write(0,*)'spginfo library 29.9.2020'
 
