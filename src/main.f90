@@ -121,17 +121,17 @@ end module test_space
    else
 
        select case (string) 
-         case ('-test')
-           do i=1,230
-              do j=1,spg_index(i)%nat
-                 kpos = spg_index(i)%pos(j)
-                 call spg_data(kpos)%prn()
-                 write(6,'(1x,100("="))')
-              enddo
-           enddo
+         !case ('-test')
+         !  do i=1,230
+         !     do j=1,spg_index(i)%nat
+         !        kpos = spg_index(i)%pos(j)
+         !        call spg_data(kpos)%prn()
+         !        write(6,'(1x,100("="))')
+         !     enddo
+         !  enddo
   
-         case ('-list')
-           call print_extg(6)
+         !case ('-list')
+         !  call print_extg(6)
            
          case ('--version')
            write(0,*)'spginfo library 29.9.2020'

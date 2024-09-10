@@ -752,15 +752,18 @@ type(extsymb_t), dimension(217) :: extsy = [  &
    extsymb_t('R (obv)- - c',2, [453,461,(0,i=3,16)]),  &
    extsymb_t('R (rev) - -',5, [434,437,445,451,459,(0,i=6,16)]),  &
    extsymb_t('R (rev)- - c',2, [453,461,(0,i=3,16)]),  &
-   extsymb_t('R - -',5, [434,437,445,451,459,(0,i=6,16)]),  &
-   extsymb_t('R - c',2, [453,461,(0,i=3,16)]),  &
+   extsymb_t('R - - -',5, [434,437,445,451,459,(0,i=6,16)]),  &
+   extsymb_t('R - - c',2, [453,461,(0,i=3,16)]),  &
    extsymb_t('P 63 - -',3, [467,470,476,(0,i=4,16)]),  &
    extsymb_t('P 62 - -',4, [465,474,466,475,(0,i=5,16)]),  &
    extsymb_t('P 61 - -',4, [463,472,464,473,(0,i=5,16)]),  &
-   extsymb_t('P - - c',2, [478,486,(0,i=3,16)]),  &
-   extsymb_t('P - c c',5, [489,494,503,511,517,(0,i=6,16)]),  &
-   extsymb_t('P - - -',1, [492,(0,i=2,16)]),  &
-   extsymb_t('P 21(42) - -',1, [504,(0,i=2,16)]),  &
+!   extsymb_t('P - - c',2, [478,486,(0,i=3,16)]),  &
+!rem   extsymb_t('P - - c',2, [480,484,(0,i=3,16)]),  &
+   extsymb_t('P - c c',2, [478,486,(0,i=3,16)]),  &
+!   extsymb_t('P - - -',1, [492,(0,i=2,16)]),  &
+   extsymb_t('P - - -',5, [489,494,503,511,517,(0,i=6,16)]),  &
+   extsymb_t('P 21 - -',1, [492,(0,i=2,16)]),  &
+   extsymb_t('P 42 - -',1, [504,(0,i=2,16)]),  &
    extsymb_t('P 41 - -',2, [509,508,(0,i=3,16)]),  &
    extsymb_t('P - - n',2, [514,520,(0,i=3,16)]),  &
    extsymb_t('P a - -',1, [501,(0,i=2,16)]),  &
@@ -862,7 +865,8 @@ type(pmat_type), dimension(SG_NUMBER) :: pmatrix = (/ &
  pmat_type('b,-a-c,c                                      ','-b-c,a,c         '),      &     ! 13 'P 2/c 1 1  '
  pmat_type('a,b,c                                         ','a,b,c            '),      &     ! 14 'P 21/c     '
  pmat_type('-a-c,b,a                                      ','c,b,-a-c         '),      &     ! 14 'P 21/n     '
- pmat_type('c,b,-a-c                                      ','-a-c,b,a         '),      &     ! 14 'P 21/a     '
+ !pmat_type('c,b,-a-c                                      ','-a-c,b,a         '),      &     ! 14 'P 21/a     '
+ pmat_type('c,b,a                                         ','c,b,a            '),      &     ! 14 'P 21/a     '
  pmat_type('c,a,b                                         ','b,c,a            '),      &     ! 14 'P 1 1 21/a '
  pmat_type('a,-a-c,b                                      ','a,c,-a-b         '),      &     ! 14 'P 1 1 21/n '
  pmat_type('-a-c,c,b                                      ','-a-b,c,b         '),      &     ! 14 'P 1 1 21/b '
@@ -1241,39 +1245,39 @@ type(pmat_type), dimension(SG_NUMBER) :: pmatrix = (/ &
  pmat_type('2/3a+1/3b+1/3c,-1/3a+1/3b+1/3c,-1/3a-2/3b+1/3c','a-b,b-c,a+b+c    '),      &     !166 'R -3 m     '
  pmat_type('a,b,c                                         ','a,b,c            '),      &     !167 'R -3 c     '
  pmat_type('2/3a+1/3b+1/3c,-1/3a+1/3b+1/3c,-1/3a-2/3b+1/3c','a-b,b-c,a+b+c    '),      &     !167 'R -3 c     '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !168 'P 6        '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !169 'P 61       '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !170 'P 65       '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !171 'P 62       '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !172 'P 64       '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !173 'P 63       '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !174 'P -6       '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !175 'P 6/m      '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !176 'P 63/m     '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !177 'P 6 2 2    '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !178 'P 61 2 2   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !179 'P 65 2 2   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !180 'P 62 2 2   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !181 'P 64 2 2   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !182 'P 63 2 2   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !183 'P 6 m m    '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !184 'P 6 c c    '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !185 'P 63 c m   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !186 'P 63 m c   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !187 'P -6 m 2   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !188 'P -6 c 2   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !189 'P -6 2 m   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !190 'P -6 2 c   '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !191 'P 6/m m m  '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !192 'P 6/m c c  '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !193 'P 63/m c m '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !194 'P 63/m m c '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !195 'P 2 3      '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !196 'F 2 3      '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !197 'I 2 3      '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !198 'P 21 3     '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !199 'I 21 3     '
- pmat_type('a,b,c                                         ','a,b,b            '),      &     !200 'P m -3     '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !168 'P 6        '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !169 'P 61       '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !170 'P 65       '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !171 'P 62       '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !172 'P 64       '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !173 'P 63       '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !174 'P -6       '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !175 'P 6/m      '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !176 'P 63/m     '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !177 'P 6 2 2    '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !178 'P 61 2 2   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !179 'P 65 2 2   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !180 'P 62 2 2   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !181 'P 64 2 2   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !182 'P 63 2 2   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !183 'P 6 m m    '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !184 'P 6 c c    '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !185 'P 63 c m   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !186 'P 63 m c   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !187 'P -6 m 2   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !188 'P -6 c 2   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !189 'P -6 2 m   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !190 'P -6 2 c   '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !191 'P 6/m m m  '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !192 'P 6/m c c  '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !193 'P 63/m c m '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !194 'P 63/m m c '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !195 'P 2 3      '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !196 'F 2 3      '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !197 'I 2 3      '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !198 'P 21 3     '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !199 'I 21 3     '
+ pmat_type('a,b,c                                         ','a,b,c            '),      &     !200 'P m -3     '
  pmat_type('a-1/4,b-1/4,c-1/4                             ','a+1/4,b+1/4,c+1/4'),      &     !201 'P n -3     '
  pmat_type('a,b,c                                         ','a,b,c            '),      &     !201 'P n -3     '
  pmat_type('a,b,c                                         ','a,b,c            '),      &     !202 'F m -3     '

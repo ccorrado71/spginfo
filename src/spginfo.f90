@@ -50,6 +50,8 @@ MODULE spginfom
 !S make_frequency(freq,kpr)                                       Call this subroutine to create info about frequency of spg
 !F is_chiral(spg)                                                 Is spg chiral?
 !F get_extinction_symbol(spg)                                     Get extinction symbol
+!F csys_from_exts(ext_symbol)                                     Get crystal system from extinction symbol
+!S print_extsymb(kpr)                                             Print extinction symbols for each crystal system
 !F z_from_spg(spgnum)                                             Z from spg number
 !F is_standardize(spg)                                            Check if space group can be standardized
 
@@ -65,12 +67,12 @@ MODULE spginfom
 
    type spaceg_type
         integer                          :: num                  ! spacegroup number
-        character(len=40)                :: symbol_hall          ! Hall symbol
-        character(len=40)                :: symbol_xhm           ! Hermann Maugin symbol
-        character(len=40), dimension(2)  :: symbol_alt           ! Alternative symbols
-        character(len=6)                 :: symbol_sch           ! Schoenflies notation
-        character(len=8)                 :: symbol_patt          ! Patterson Spacegroup
-        character(len=8)                 :: choice               ! Table setting choice
+        character(len=40)                :: symbol_hall = ''     ! Hall symbol
+        character(len=40)                :: symbol_xhm  = ''     ! Hermann Maugin symbol
+        character(len=40), dimension(2)  :: symbol_alt  = ''     ! Alternative symbols
+        character(len=6)                 :: symbol_sch  = ''     ! Schoenflies notation
+        character(len=8)                 :: symbol_patt = ''     ! Patterson Spacegroup
+        character(len=8)                 :: choice      = ''     ! Table setting choice
 
         integer                          :: nsymop               ! Multiplicity: total number of symmetry operators 
         integer                          :: nsymop_prim          ! Number of primitive symmetry operators (inversion included)
@@ -219,8 +221,8 @@ MODULE spginfom
 
    integer, parameter, private :: NSPGTOT   = 551
    integer, parameter, private :: NUMSPGMAX = 230
-   type(spaceg_type), dimension(NSPGTOT)      :: spg_data
-   type(container_type), dimension(NUMSPGMAX) :: spg_index
+   type(spaceg_type), dimension(NSPGTOT), private      :: spg_data
+   type(container_type), dimension(NUMSPGMAX), private :: spg_index
 
 CONTAINS
 
@@ -1105,7 +1107,7 @@ CONTAINS
 !  Change S (origin choice 1 of International Tables) in ':1'
 !  Change Z (origin at a center of symmetry) in ':2'
    lens = len_trim(spgr)
-   if (lens > 0) then
+   if (lens > 1) then
        if (spgr(lens:lens) == 'S' .or. spgr(lens:lens) == 's') then
            if (spgr(lens-1:lens-1) == ':') then   ! check if comma is present 
                spgr(lens:lens) = '1'
@@ -3576,29 +3578,30 @@ CONTAINS
                                                       24,     34,     46,     24,     51,     50,    270,    118,     87,    242,  &
                                                      128,    103,     61,     25,    532,     48,    127,    116,    130,     82]
 
-  real, dimension(230), parameter :: freq_perc = [0.95, 24.53,  0.02,  5.18,  0.85,  0.00,  0.43,  0.04,  1.05,  0.01,  &
-                                                  0.50,  0.51,  0.65, 34.57,  8.35,  0.00,  0.01,  0.41,  7.24,  0.17,  &
-                                                  0.01,  0.00,  0.02,  0.01,  0.00,  0.02,  0.00,  0.00,  0.74,  0.01,  &
-                                                  0.06,  0.02,  1.38,  0.03,  0.00,  0.14,  0.01,  0.00,  0.01,  0.02,  &
-                                                  0.11,  0.01,  0.34,  0.01,  0.06,  0.01,  0.00,  0.01,  0.00,  0.01,  &
-                                                  0.01,  0.11,  0.01,  0.05,  0.03,  0.35,  0.10,  0.07,  0.03,  0.85,  &
-                                                  3.34,  1.08,  0.10,  0.13,  0.01,  0.01,  0.01,  0.05,  0.01,  0.11,  &
-                                                  0.01,  0.04,  0.03,  0.02,  0.01,  0.09,  0.01,  0.08,  0.03,  0.03,  &
-                                                  0.02,  0.14,  0.00,  0.01,  0.09,  0.13,  0.07,  0.36,  0.00,  0.01,  &
-                                                  0.01,  0.19,  0.00,  0.02,  0.01,  0.17,  0.01,  0.01,  0.00,  0.00,  &
-                                                  0.00,  0.00,  0.00,  0.01,  0.00,  0.01,  0.00,  0.00,  0.00,  0.04,  &
-                                                  0.00,  0.00,  0.03,  0.12,  0.00,  0.00,  0.01,  0.02,  0.00,  0.01,  &
-                                                  0.02,  0.06,  0.02,  0.01,  0.00,  0.02,  0.01,  0.01,  0.02,  0.05,  &
-                                                  0.00,  0.00,  0.00,  0.01,  0.01,  0.02,  0.01,  0.01,  0.02,  0.01,  &
-                                                  0.02,  0.05,  0.02,  0.07,  0.07,  0.13,  0.12,  0.65,  0.00,  0.01,  &
-                                                  0.00,  0.09,  0.00,  0.07,  0.05,  0.00,  0.00,  0.01,  0.03,  0.03,  &
-                                                  0.10,  0.00,  0.04,  0.01,  0.07,  0.04,  0.16,  0.00,  0.06,  0.06,  &
-                                                  0.01,  0.01,  0.07,  0.00,  0.00,  0.12,  0.00,  0.03,  0.02,  0.01,  &
-                                                  0.00,  0.01,  0.00,  0.00,  0.00,  0.01,  0.00,  0.00,  0.00,  0.02,  &
-                                                  0.01,  0.01,  0.01,  0.02,  0.00,  0.01,  0.02,  0.06,  0.01,  0.00,  &
-                                                  0.00,  0.00,  0.01,  0.01,  0.09,  0.01,  0.00,  0.00,  0.00,  0.00,  &
-                                                  0.00,  0.00,  0.01,  0.00,  0.01,  0.01,  0.03,  0.01,  0.01,  0.03,  &
-                                                  0.02,  0.01,  0.01,  0.00,  0.07,  0.01,  0.02,  0.01,  0.02,  0.01]
+  real, parameter :: sum_freq = 100.0/sum(freq_no)
+!corr  real, dimension(230), parameter :: freq_perc = [0.95, 24.53,  0.02,  5.18,  0.85,  0.00,  0.43,  0.04,  1.05,  0.01,  &
+!corr                                                  0.50,  0.51,  0.65, 34.57,  8.35,  0.00,  0.01,  0.41,  7.24,  0.17,  &
+!corr                                                  0.01,  0.00,  0.02,  0.01,  0.00,  0.02,  0.00,  0.00,  0.74,  0.01,  &
+!corr                                                  0.06,  0.02,  1.38,  0.03,  0.00,  0.14,  0.01,  0.00,  0.01,  0.02,  &
+!corr                                                  0.11,  0.01,  0.34,  0.01,  0.06,  0.01,  0.00,  0.01,  0.00,  0.01,  &
+!corr                                                  0.01,  0.11,  0.01,  0.05,  0.03,  0.35,  0.10,  0.07,  0.03,  0.85,  &
+!corr                                                  3.34,  1.08,  0.10,  0.13,  0.01,  0.01,  0.01,  0.05,  0.01,  0.11,  &
+!corr                                                  0.01,  0.04,  0.03,  0.02,  0.01,  0.09,  0.01,  0.08,  0.03,  0.03,  &
+!corr                                                  0.02,  0.14,  0.00,  0.01,  0.09,  0.13,  0.07,  0.36,  0.00,  0.01,  &
+!corr                                                  0.01,  0.19,  0.00,  0.02,  0.01,  0.17,  0.01,  0.01,  0.00,  0.00,  &
+!corr                                                  0.00,  0.00,  0.00,  0.01,  0.00,  0.01,  0.00,  0.00,  0.00,  0.04,  &
+!corr                                                  0.00,  0.00,  0.03,  0.12,  0.00,  0.00,  0.01,  0.02,  0.00,  0.01,  &
+!corr                                                  0.02,  0.06,  0.02,  0.01,  0.00,  0.02,  0.01,  0.01,  0.02,  0.05,  &
+!corr                                                  0.00,  0.00,  0.00,  0.01,  0.01,  0.02,  0.01,  0.01,  0.02,  0.01,  &
+!corr                                                  0.02,  0.05,  0.02,  0.07,  0.07,  0.13,  0.12,  0.65,  0.00,  0.01,  &
+!corr                                                  0.00,  0.09,  0.00,  0.07,  0.05,  0.00,  0.00,  0.01,  0.03,  0.03,  &
+!corr                                                  0.10,  0.00,  0.04,  0.01,  0.07,  0.04,  0.16,  0.00,  0.06,  0.06,  &
+!corr                                                  0.01,  0.01,  0.07,  0.00,  0.00,  0.12,  0.00,  0.03,  0.02,  0.01,  &
+!corr                                                  0.00,  0.01,  0.00,  0.00,  0.00,  0.01,  0.00,  0.00,  0.00,  0.02,  &
+!corr                                                  0.01,  0.01,  0.01,  0.02,  0.00,  0.01,  0.02,  0.06,  0.01,  0.00,  &
+!corr                                                  0.00,  0.00,  0.01,  0.01,  0.09,  0.01,  0.00,  0.00,  0.00,  0.00,  &
+!corr                                                  0.00,  0.00,  0.01,  0.00,  0.01,  0.01,  0.03,  0.01,  0.01,  0.03,  &
+!corr                                                  0.02,  0.01,  0.01,  0.00,  0.07,  0.01,  0.02,  0.01,  0.02,  0.01]
 
   integer, dimension(230), parameter :: freq_rank = [ 10,   2,  96,   5,  12, 202,  18,  69,   9, 111,  &
                                                       17,  16,  14,   1,   3, 177, 136,  19,   4,  24,  &
@@ -3626,7 +3629,8 @@ CONTAINS
 !
    if (spg%num == 0) return
    spg%freq_no = freq_no(spg%num)
-   spg%freq_perc = freq_perc(spg%num)
+!corr   spg%freq_perc = freq_perc(spg%num)
+   spg%freq_perc = sum_freq*freq_no(spg%num)
    spg%freq_rank = freq_rank(spg%num)
 !
    end subroutine spg_frequency
@@ -3642,14 +3646,14 @@ CONTAINS
    integer, intent(in)               :: kpr
    integer, dimension(230)           :: iord
    integer                           :: i
-   real                              :: costp
+!corr   real                              :: costp
 !
 !  write No. of occurencies
    write(kpr,'(10(i7,","),"  &")')(freq(i),i=1,230)
 !
 !  write %
-   costp = 100.0/sum(freq)  
-   write(kpr,'(10(f6.2,","),"  &")')(freq(i)*costp,i=1,230)
+!corr   costp = 100.0/sum(freq)  
+!corr   write(kpr,'(10(f6.2,","),"  &")')(freq(i)*costp,i=1,230)
 !
 !  write rank
    call indexx(freq,iord)
@@ -3696,17 +3700,48 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------
 
-   subroutine print_extg(kpr)
+   integer function csys_from_exts(ext_symbol)
+!
+!  Get crystal system from extinction symbol
+!
+   type(extsymb_t), intent(in) :: ext_symbol
+!
+   csys_from_exts = csys_code_from_num(sg_info(ext_symbol%spgn(1))%num)
+!
+   end function csys_from_exts
+
+!--------------------------------------------------------------------------------------
+
+   subroutine print_extsymb(kpr)
 !
 !  Used to generate csv file with extinction symbols and corresponding space groups.
+!  Convert in html: Open csv file in Libreoffice > Table > Convert table to text > Export > html
 !
    USE symm_table
    USE strutil
    integer, intent(in) :: kpr
    integer             :: i,j,ns
+   integer             :: last_csys, new_csys
 !
+   last_csys = -1
+   write(kpr,'(a)')"#;Extinction Symbol;Space Groups"
    do i=1,size(extsy)
-      write(kpr,'(a)',advance='no')trim(extsy(i)%symb)//';'
+!
+!     Print crystal system combining trigonal and hexagonal
+      new_csys = csys_from_exts(extsy(i))
+      if (new_csys == CS_Trigonal) new_csys = CS_Hexagonal
+      if (new_csys /= last_csys) then
+          if (new_csys == CS_Hexagonal) then
+              write(kpr,'(a)')trim(cry_sys(CS_Trigonal))//"/"//trim(cry_sys(CS_Hexagonal))
+          else
+              write(kpr,'(a)')trim(cry_sys(new_csys))
+          endif
+          last_csys = new_csys
+      endif
+!
+!     Print space group list
+      !write(kpr,'(a)',advance='no')trim(extsy(i)%symb)//';'
+      write(kpr,'(i0,a)',advance='no')i,';'//trim(extsy(i)%symb)//';'
       do j=1,extsy(i)%nspg-1
          ns = extsy(i)%spgn(j)
          write(kpr,'(a,1x)',advance='no')trim(s_blank_delete(sg_info(ns)%hm2))//'('//i_to_s(sg_info(ns)%num)//')'//','
@@ -3715,7 +3750,7 @@ CONTAINS
       write(kpr,'(a)',advance='yes')trim(s_blank_delete(sg_info(ns)%hm2))//'('//i_to_s(sg_info(ns)%num)//')'
    enddo
 !
-   end subroutine print_extg
+   end subroutine print_extsymb
 
 !--------------------------------------------------------------------------------------
 
@@ -3763,7 +3798,7 @@ CONTAINS
 !   character(len=:), allocatable :: line,line1
 !   integer                       :: iext,ispg,i,spos
 !   logical                       :: lvar
-!   integer, parameter            :: MAXSPG=16,MAXEXT=217
+!   integer, parameter            :: MAXSPG=16,MAXEXT=216
 !   type(sg_info_type)            :: infos
 !!
 !   call feg%fopen('expo.egr')
