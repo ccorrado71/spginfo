@@ -4017,6 +4017,11 @@ CONTAINS
    integer :: irep
    character(len=40) :: spg_alternative
 
+   do i=1,NSPGTOT
+      call spg_data(i)%prn()
+      write(6,'(1x,100("="))')
+   enddo
+
    !do i=1,NUMSPGMAX
    !   num = spg_index(i)%pos(1)
    !   write(70,*)'NUM=',num,spg_data(num)%standard
@@ -4031,22 +4036,22 @@ CONTAINS
    !   enddo
    !enddo
 
-   do i=1,NSPGTOT
-      if (spg_data(i)%symbol_xhm /= 'Unknown') then
-          if (spg_data(i)%csys_code == CS_Monoclinic) then
+   !do i=1,NSPGTOT
+   !   if (spg_data(i)%symbol_xhm /= 'Unknown') then
+   !       if (spg_data(i)%csys_code == CS_Monoclinic) then
 !
-!             Strip ' 1' for space groups with 2 along b
-              if (spg_data(i)%axis_direction() == 'b') then
-                  spg_alternative = spg_data(i)%symbol_xhm 
-                  call s_s_delete(spg_alternative,' 1',irep)
-                  write(70,'(a,i4,a)')'{',spg_data(i)%num,', "'//trim(adjustl(spg_alternative))//'" },'
-                  cycle
-              endif
-          endif
-          write(70,'(a,i4,a)')'{',spg_data(i)%num,', "'//trim(adjustl(spg_data(i)%symbol_xhm))//'" },'
-      endif
-      if (spg_data(i)%num == 230) exit
-   enddo
+!  !           Strip ' 1' for space groups with 2 along b
+   !           if (spg_data(i)%axis_direction() == 'b') then
+   !               spg_alternative = spg_data(i)%symbol_xhm 
+   !               call s_s_delete(spg_alternative,' 1',irep)
+   !               write(70,'(a,i4,a)')'{',spg_data(i)%num,', "'//trim(adjustl(spg_alternative))//'" },'
+   !               cycle
+   !           endif
+   !       endif
+   !       write(70,'(a,i4,a)')'{',spg_data(i)%num,', "'//trim(adjustl(spg_data(i)%symbol_xhm))//'" },'
+   !   endif
+   !   if (spg_data(i)%num == 230) exit
+   !enddo
 
    end subroutine spg_database_print
 
