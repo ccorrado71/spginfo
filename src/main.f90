@@ -123,13 +123,6 @@ end module test_space
        select case (string) 
          case ('-test')
            call spg_database_print()
-           !do i=1,230
-           !   do j=1,spg_index(i)%nat
-           !      kpos = spg_index(i)%pos(j)
-           !      call spg_data(kpos)%prn()
-           !      write(6,'(1x,100("="))')
-           !   enddo
-           !enddo
   
          !case ('-list')
          !  call print_extg(6)

@@ -107,6 +107,7 @@ MODULE spginfom
         real                             :: freq_perc=0.         ! Frequency as percentage
         integer                          :: freq_rank=0          ! Rank
         logical                          :: standard = .false.   ! True for standard choice of origin
+        integer                          :: standard_id = 0      ! pointer to spg_data for standard space group
         character(len=46)                :: pmat = ' '           ! Transformation matrix to non-conventional setting
         character(len=17)                :: pmat1 = ' '          ! Transformation matrix to standard setting
      
@@ -131,6 +132,7 @@ MODULE spginfom
         procedure :: get_pmat
         procedure :: get_pmat1
         procedure :: get_id
+        procedure :: id_setting
 
         procedure, private :: polar3
         procedure, private :: polar1
@@ -243,7 +245,7 @@ CONTAINS
    integer                                              :: nsym
    integer                                              :: lens
    logical                                              :: find_hall,find_hm
-   integer                                              :: i
+   integer                                              :: i, ids
 !
    sfound = .false.
    if (present(spgnum)) then    ! cerca g.s. a partire dal numero
@@ -254,7 +256,8 @@ CONTAINS
                    sfound = .true.
                endif
            else
-               spaceg = spg_data(spg_index(spgnum)%pos(1))
+               ids = spg_data(spg_index(spgnum)%pos(1))%standard_id
+               spaceg = spg_data(ids)
                sfound = .true.
            endif
        endif
@@ -473,6 +476,7 @@ CONTAINS
    integer                        :: jfile,pos,numspg,i,j,num,spos
    character(len=:), allocatable  :: line
    type(sg_info_type)             :: info
+   integer                        :: std_id
 
    call fspg%fopen(spg_filename,'r')
    if (fspg%fail()) then
@@ -515,19 +519,28 @@ CONTAINS
       if (spg_index(i)%nat == 1) then
           num = spg_index(i)%pos(1) 
           spg_data(num)%standard = .true.
+          spg_data(num)%standard_id = num
       else
           ! The standard has pmat = identity matrix
+          std_id = 0
           do j=1,spg_index(i)%nat
              num = spg_index(i)%pos(j) 
              if (s_eqi(spg_data(num)%pmat,'a,b,c')) then
                  spg_data(num)%standard = .true.
-                 if (j /= 1) then
-!                    Put the standard at 1 in the pos array
-                     call swap(spg_index(i)%pos(1),spg_index(i)%pos(j))
-                 endif
+                 std_id = num
+                 !if (j /= 1) then
+!                !    Put the standard at 1 in the pos array
+                 !    call swap(spg_index(i)%pos(1),spg_index(i)%pos(j))
+                 !endif
                  exit
              endif
           enddo
+          if (std_id > 0) then
+              do j=1,spg_index(i)%nat
+                 num = spg_index(i)%pos(j) 
+                 spg_data(num)%standard_id = std_id
+              enddo
+          endif
       endif
    enddo
 
@@ -4011,14 +4024,40 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------
 
+   integer function id_setting(spg)
+!
+!  Get setting id of spacegroup
+!
+   class(spaceg_type), intent(in) :: spg
+   integer                        :: i
+!
+   id_setting = 0
+   if (spg%id > 0) then
+       do i=1,spg_index(spg%num)%nat
+          if (spg_index(spg%num)%pos(i) == spg%id+1) then
+              id_setting = i
+              exit
+          endif
+       enddo
+   endif
+!
+   end function id_setting
+
+!--------------------------------------------------------------------------------------
+
    subroutine spg_database_print()
    use strutil
    integer :: i
    integer :: irep
    character(len=40) :: spg_alternative
+   integer :: ids
 
    do i=1,NSPGTOT
-      call spg_data(i)%prn()
+      !call spg_data(i)%prn()
+      ids = spg_data(i)%standard_id
+      write(6,'(i4,") ",a,l5,l5,2x,i5,i5,3x,a)')spg_data(i)%num, spg_data(i)%symbol_xhm, spg_data(i)%standard,   &
+                                        spg_data(i)%id + 1 == spg_data(i)%standard_id,                           &
+                                        spg_data(i)%id_setting(), spg_data(i)%standard_id,spg_data(ids)%symbol_xhm
       write(6,'(1x,100("="))')
    enddo
 
