@@ -649,7 +649,8 @@ CONTAINS
    write(kpr,'(a,i0,a,i0)') &
                          ' Frequency(no. in CSD):  ',this%freq_no,'('//r_to_s(this%freq_perc,2)//'%), rank:',this%freq_rank
    if (.not.this%standard) then
-       num = spg_index(this%num)%pos(1)
+       !num = spg_index(this%num)%pos(1)
+       num = this%standard_id
        !write(kpr,'(a)') ' Non-standard space group setting ('//trim(spg_data(num)%symbol_xhm)//')'
        write(kpr,'(a,i0,a)')' The standard setting of the space group ',this%num,' is '//trim(spg_data(num)%symbol_xhm)
    endif
@@ -3987,11 +3988,14 @@ CONTAINS
    type(spaceg_type)             :: std_spg
    integer                       :: num
 !
-   call std_spg%init()
-   if (spg%num == 0) return
+   if (spg%num == 0 .or. spg%standard_id <= 0) then
+       call std_spg%init()
+       return
+   endif
 
-   num = spg_index(spg%num)%pos(1)
-   std_spg = spg_data(num)
+   !num = spg_index(spg%num)%pos(1)
+   !std_spg = spg_data(num)
+   std_spg = spg_data(spg%standard_id)
 !
    end function standard_spg
 
@@ -4050,14 +4054,14 @@ CONTAINS
    integer :: i
    integer :: irep
    character(len=40) :: spg_alternative
-   integer :: ids
+   !type(spaceg_type) :: std_spg
 
    do i=1,NSPGTOT
-      !call spg_data(i)%prn()
-      ids = spg_data(i)%standard_id
-      write(6,'(i4,") ",a,l5,l5,2x,i5,i5,3x,a)')spg_data(i)%num, spg_data(i)%symbol_xhm, spg_data(i)%standard,   &
-                                        spg_data(i)%id + 1 == spg_data(i)%standard_id,                           &
-                                        spg_data(i)%id_setting(), spg_data(i)%standard_id,spg_data(ids)%symbol_xhm
+      call spg_data(i)%prn()
+      !std_spg = standard_spg(spg_data(i))
+      !write(6,'(i4,") ",a,l5,l5,2x,i5,i5,3x,a)')spg_data(i)%num, spg_data(i)%symbol_xhm, spg_data(i)%standard,   &
+      !                                  spg_data(i)%id + 1 == spg_data(i)%standard_id,                           &
+      !                                  spg_data(i)%id_setting(), spg_data(i)%standard_id,std_spg%symbol_xhm
       write(6,'(1x,100("="))')
    enddo
 
