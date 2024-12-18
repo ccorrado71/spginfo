@@ -3986,7 +3986,7 @@ CONTAINS
    function standard_spg(spg) result(std_spg)
    type(spaceg_type), intent(in) :: spg
    type(spaceg_type)             :: std_spg
-   integer                       :: num
+   !integer                       :: num
 !
    if (spg%num == 0 .or. spg%standard_id <= 0) then
        call std_spg%init()
@@ -4052,8 +4052,8 @@ CONTAINS
    subroutine spg_database_print()
    use strutil
    integer :: i
-   integer :: irep
-   character(len=40) :: spg_alternative
+   !integer :: irep
+   !character(len=40) :: spg_alternative
    !type(spaceg_type) :: std_spg
 
    do i=1,NSPGTOT
